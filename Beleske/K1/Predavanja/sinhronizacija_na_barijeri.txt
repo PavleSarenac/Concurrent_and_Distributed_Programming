@@ -1,0 +1,55 @@
+- Sinhronizacija na barijeri - Barrier synchronization
+process Worker[i = 1 to n] {
+	while (true) {
+		kod kojim se implementira task i;
+		cekanje na svih n taskova da se zavrse;
+	}
+}
+
+- Sinhronizacija na barijeri - neefikasan pristup
+while (true) {
+	co [i = 1 to n]  /* co je isto kao da smo pozvali za svaku od n niti thread.start() u Javi - ova linija koda pokrece n niti */
+		kod za task i;
+	oc  /* oc je isto kao da smo pozvali thread.join() za svaku od n niti u Javi - ova linija koda ceka da se svih n niti zavrsi */
+}
+
+- Jednokratna barijera - Shared counter barrier
+	* problem sa resetovanjem brojaca count - ako bismo dodali liniju koda na kraju <count = 0;> to ne
+	bi valjalo jer bi onda bilo moguce da se npr. odblokira jedan proces i resetuje brojac dok su ostali
+	procesi i dalje blokirani na uslovu count == n, ali sada oni ne bi mogli da se odblokiraju jer je count
+	vracen na 0
+	* coarse-grain
+		<count = count + 1;>
+		<await(count == n);>
+	* fine-grain
+		FA(count, 1);
+		while (count != n) skip;
+		
+- Sinhronizacija na barijeri sa procesom koordinatorom
+	* ovo se moze implementirati i tako da proces koordinator nije unapred odredjen, vec da od nasih
+	n procesa prvi ili poslednji proces koji dodje na barijeru postane proces koordinator i da on vrsi
+	zeljenu sinhronizaciju
+int arrive[1:n] = ([n] 0), continue[1:n] = ([n] 0);
+process Worker[i = 1 to n] {
+	while (true) {
+		kod taska i;
+		arrive[i] = 1;
+		<await(continue[i] == 1);>  /* prvi proces moze prodje ovaj uslov tek nakon sto su svi procesi stigli na barijeru */
+		continue[i] = 0;
+	}
+}
+process Coordinator {
+	while (true) {
+		for [i = 1 to n] {
+			<await(arrive[i] == 1);>
+			arrive[i] = 0;
+		}
+		for [i = 1 to n] continue[i] = 1;
+	}
+}
+
+- Problemi sa zaposlenim cekanjem
+	* zaposleno cekanje treba primenjivati u slucajevima kada je posao koji treba da se obavi
+	kratkotrajan - tada ne treba opterecivati operativni sistem koristeci njegove usluge za
+	sinhronizaciju jer su to skupi rezijski troskovi
+	* kada je posao koji treba da se obavi dugotrajan, treba pribeci drugim tehnikama sinhronizacije

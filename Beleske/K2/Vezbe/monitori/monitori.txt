@@ -1,0 +1,47 @@
+monitor MyMonitor {
+    int p1, p2;  // Stalne promenljive, njihova vrednost se ne menja izvan metoda.
+    cond cond1, cond2;  // Uslovne promenljive.
+
+    void method() {
+        int lp1, lp2;  // Lokalne promenljive.
+    }
+}
+
+- Monitori su korisni jer se u njima pise iskljucivo kod za sinhronizaciju i tako onda razdvajamo nas
+obican sekvencijalni kod od koda za sinhronizaciju - bolja modularnost.
+- Metode sa nepoznatom duzinom izvrsavanja ne treba nikada da se pozivaju iz monitorskih metoda.
+
+- Bezuslovno blokiranje procesa na uslovnoj promenljivoj cond.
+cond.wait();
+
+- Ukoliko nema nijednog blokiranog procesa na promenljivoj cond, ova operacija nema efekta. Medjutim, ako
+ima blokiranih procesa onda postoje tri razlicite discipline koje se postuju pri njihovom budjenju:
+    * Signal and Continue (SC)
+        - Ekskluzivno pravo pristupa monitoru zadrzava proces koji je pozvao signal.
+    * Signal and Wait (SW)
+        - Onaj koji je pozvao signal prepusta ekskluzivno pravo pristupa monitoru probudjenom procesu, 
+        a on ide u entry queue.
+    * Signal and Urgent Wait (SUW)
+        - Onaj koji je pozvao signal prepusta ekskluzivno pravo pristupa monitoru probudjenom procesu, 
+        a on ide u urgent queue, i tako je on garantovano sledeci koji dobija pristup monitoru nakon
+        sto probudjeni proces zavrsi svoj posao u monitoru.
+- Ukoliko je cond.signal() poslednja instrukcija u metodi monitora, kod SW i SUW disciplina proces koji
+je pozvao signal nece ici u entry, tj. urgent queue jer je svoj posao u monitoru zavrsio.
+cond.signal();
+
+- Ova metoda vraca true ako je red cekanja na uslovnoj promenljivoj cond prazan.
+cond.empty();
+
+- Ova metoda vraca true ako red cekanja na uslovnoj promenljivoj cond nije prazan.
+cond.queue();
+
+- Procesi dobijaju prioritete koji uticu na redosled njihovog budjenja.
+    * Manji broj - veci prioritet.
+cond.wait(priority);
+
+- Budjenje svih procesa koji cekaju na uslovnoj promenljivoj cond.
+    * Ova metoda ima smisla samo kod SC discipline jer tu probudjeni procesi idu u entry queue.
+cond.signalAll();
+
+- Ova metoda vraca najvisi prioritet procesa iz reda cekanja na uslovnoj promenljivoj cond.
+cond.minrank();

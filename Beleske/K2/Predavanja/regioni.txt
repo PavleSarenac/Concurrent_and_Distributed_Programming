@@ -1,0 +1,52 @@
+* osnovni pojmovi
+	- sa konceptom regiona zelimo da obezbedimo jednostavan pristup kriticnoj sekciji
+	- zelimo da eksplicitno oznacimo kriticnu sekciju pomocu posebnog objekta koji se naziva region
+	- region je objekat, dakle moze imati atribute - to treba iskoristiti tako sto cemo medju njegovim
+	atributima cuvati sve promenljive koje sluze za sinhronizaciju
+		* to je sustina regiona, da mozemo na jednom mestu u kodu da skupimo promenljive koje sluze za sinhronizaciju
+		da ih ne bismo mesali sa ostalim promenljivama
+	- kod pristupa kriticnom regionu je implicitno obezbedjeno medjusobno iskljucivanje procesa
+	
+	- kriticni region se sintaksno definise na sledeci nacin:
+	Pascal:
+	region res do
+	begin
+		...
+	end;
+	
+	Java:
+	synchronized (referenca) {  // ovo je region
+		...  // ovde imamo ekskluzivno pravo pristupa objektu na koji pokazuje referenca (obezbedjeno medjusobno iskljucivanje)
+	}
+	
+	- uslovni kriticni region je kriticni region koji pored obezbedjivanja medjusobnog iskljucivanja ima i mehanizam za uslovnu
+	sinhronizaciju procesa preko (opcionih) await naredbi
+	- u dve situacije se procesi odricu ekskluzivnog prava pristupa kriticnom regionu:
+		1) kada se unutar kriticnog regiona naidje na await naredbu ciji uslov nije zadovoljen, proces se blokira i pritom 
+			odrice ekskluzivnog prava pristupa resursu da bi neki drugi proces mogao da pokusa da udje u kriticni region
+		2) kada proces zavrsi koriscenje kriticnog regiona
+	- podrazumevano nije garantovan redosled koji proces ce sledeci dobiti ekskluzivno pravo pristupa kriticnom regionu
+	
+	- uslovni kriticni region se sintaksno definise na sledeci nacin:
+	Pascal:
+	region res do
+	begin
+		...
+		await(condition);  // ako nije ispunjen uslov proces ce se blokirati i napustiti kriticni region da bi neko drugi mogao da proba da udje
+		...
+	end;
+	
+	Java:
+	synchronized (referenca) {
+		...
+		referenca.notifyAll();  // ovo radimo da bi mogli drugi procesi da probaju da udju u kriticni region ako se tekuci zablokira na wait-u
+		while (!condition) {
+			referenca.wait();
+		}
+		...
+		referenca.notifyAll();  // ovo radimo da bi mogli drugi procesi da probaju da udju u kriticni region posto ce tekuci sad da izadje
+	}
+	
+	- notifyAll() ubija performanse jer budi sve niti - veliki rezijski troskovi
+	- metode wait, notify i notifyAll smeju da se zovu samo za objekte za koje smo dobili ekskluzivno pravo pristupa (dakle unutar synchronized
+	bloka za taj objekat)

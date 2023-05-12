@@ -1,0 +1,272 @@
+* napomene:
+	- skip oznacava da tu zelimo da se na najbolji moguci nacin utrosi procesorsko vreme (dok se ceka
+	ispunjenje nekog uslova) i to moze znaciti vise stvari: uposleno cekanje, suspendovanje tekuceg 
+	procesa itd.
+	
+* sinhronizacioni algoritmi:
+	- ne obezbedjuju FIFO redosled pustanja procesa u kriticnu sekciju:
+		* Tie-Breaker (Petersonov) algoritam
+	- obezbedjuju FIFO redosled pustanja procesa u kriticnu sekciju:
+		* Ticket algoritam
+		* Bakery algoritam
+		* Andersenov algoritam
+		* CLH algoritam
+
+- Tie-Breaker (Petersonov) algoritam - coarse-grain
+	* ideja ovog algoritma je da ne moramo da koristimo bilo kakvu posebnu instrukciju procesora za
+	sinhronizaciju procesa
+	* logika algoritma (za 2 procesa):
+		- ako jedan proces zeli da udje u kriticnu sekciju (in1 = true, last = 1) a drugi nije to najavio 
+		(in2 = false), onda ce prvi biti pusten
+		- ako je proces najavio da zeli da udje u kriticnu sekciju (in1 = true), i ako je drugi proces takodje
+		najavio ulazak (in2 = true) i uradio upis u promenljivu last (last = 2) pre prvog, prvi proces ce se 
+		zablokirati (overwrite-ovace vrednost last i upisati da je on poslednji --> last = 1) a drugi ce imati 
+		prednost i uci u kriticnu sekciju
+bool in1 = false, in2 = false; /* ove promenljive govore da odredjeni proces najavljuje da zeli da udje u kriticnu sekciju */
+int last = 1;
+process CS1 {
+	while (true) {
+		in1 = true; last = 1;  /* entry protocol */
+		<await(!in2 or last == 2);>
+		critical section;
+		in1 = false;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+process CS2 {
+	while (true) {
+		in2 = true; last = 2;  /* entry protocol */
+		<await(!in1 or last == 1);>
+		critical section;
+		in2 = false;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Tie-Breaker (Petersonov) algoritam - fine-grain
+bool in1 = false, in2 = false;
+int last = 1;
+process CS1 {
+	while (true) {
+		in1 = true; last = 1;  /* entry protocol */
+		while (in2 and last == 1) skip;  /* ovaj uslov ne poseduje At Most Once Property, ali radi - dokazano ispitivanjem svih mogucih kombinacija ucesljavanja procesa */
+		critical section;
+		in1 = false;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+process CS2 {
+	while (true) {
+		in2 = true; last = 2;  /* entry protocol */
+		while (in1 and last == 2) skip;
+		critical section;
+		in2 = false;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Tie-Breaker (Petersonov) algoritam za n procesa - fine-grain
+* logika je ista kao za dva procesa, samo sto ovde imamo n stanja i procesi napreduju kroz njih i pusta
+se, naravno, jedan proces u kriticnu sekciju
+* proces moze da napreduje u naredno stanje:
+	1) ako ne postoji nijedan proces koji je u istom ili visem stanju od tekuceg procesa
+	2) ako postoji proces u istom ili visem stanju od tekuceg procesa, ali tekuci proces nije poslednji
+	dosao u tekuce stanje
+* u slucaju da bas n procesa zeli da udje u kriticnu sekciju, situacija je sledeca:
+	- u svakom od n-1 stanja ce ostati po jedan proces blokiran, a samo jedan proces ce proci u n-to 
+	stanje i taj proces ce uci u kriticnu sekciju; nakon sto izadje taj proces iz kriticne sekcije i postavi 
+	in[i] = 0, proces iz (n-1)-og stanja ce moci da predje u n-to stanje i udje u kriticnu sekciju itd.
+* ovaj algoritam naravno radi i za slucajeve kad je broj procesa koji treba da se sinhronizuju manji od 
+n, dakle radi za slucajeve gde je broj procesa u skupu [0, n]
+* prednost ovog algoritma:
+	- ne zahteva nijednu posebnu instrukciju procesora
+* mane ovog algoritma:
+	- ne obezbedjuje FIFO poredak pustanja procesa u kriticnu sekciju - nije posten (fair) algoritam
+	- koriscenje velikog broja promenljivih
+	- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+
+int in[1:n] = ([n] 0), last[1:n] = ([n] 0);  /* niz in[1:n] pamti za svaki proces u kom je trenutno stanju, a niz last[1:n] koji proces je poslednji dosao u koje stanje */
+process CS[i = 1 to n] {
+	while (true) {  /* entry protocol */
+		for [j = 1 to n] {
+			in[i] = j; last[j] = i;
+			for [k = 1 to n st i != k] {
+				while (in[k] >= in[i] and last[j] == i) skip;
+			}
+		}
+		critical section;
+		in[i] = 0;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Ticket algoritam - coarse-grain
+	* sustina ovog algoritma je da obezbedjuje FIFO redosled pustanja procesa u kriticnu sekciju
+	* prednost ovog algoritma:
+		- obezbedjen FIFO redosled pustanja procesa u kriticnu sekciju - posten (fair) algoritam
+	* mane ovog algoritma:
+		- koristi se specijalna instrukcija procesora Fetch and Add koju ne moraju imati svi procesori
+		- svi procesi proveravaju svoj number sa istom promenljivom next; to je lose jer uvek onda moraju
+		da se bude svi procesi nakon inkrementiranja next-a da bi se pustio samo jedan - veliki rezijski
+		troskovi (budjenje procesa)
+		- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+		
+int number = 1, next = 1, turn[1:n] = ([n] 0);  /* procitaj ovaj komentar do kraja obavezno: nema potrebe da se turn-ovi procesa pamte u globalnom nizu, mogu da se pamte i kao lokalne promenljive za svaki proces; ovde je ovako uradjeno da bi se lakse uporedili Ticket i Bakery algoritam jer u Bakery treba da bude globalan niz */
+process CS[i = 1 to n] {
+	while (true) {
+		<turn[i] = number; number = number + 1;>
+		<await(turn[i] == next);>
+		critical section;
+		<next = next + 1;>
+		noncritical section;
+	}
+}
+
+- Fetch and Add - posebna instrukcija procesora koja inkrementira promenljivu sa konstantom, pri
+cemu vraca staru vrednost promenljive
+
+int FA(var, incr) {
+	<int tmp = var; var = var + incr; return tmp;>
+}
+
+- Ticket algoritam - fine-grain
+int number = 1, next = 1, turn[1:n] = ([n] 0);
+process CS[i = 1 to n] {
+	while (true) {
+		turn[i] = FA(number, 1);  /* entry protocol */
+		while (turn[i] != next) skip;
+		critical section;
+		next = next + 1;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Bakery algoritam - coarse-grain
+	* sustina: dovoljno lici na ticket algoritam, a ne koristi se nikakva specijalna instrukcija procesora 
+	(u ticket algoritmu se koristi Fetch and Add)
+	* nije skroz isto kao ticket algoritam zato sto je izracunavanje max(turn[1:n]) aproksimacija, tj.
+	moze se desiti da vise procesa istovremeno izracunavaju taj max, pa ce dobiti istu vrednost turn[i],
+	ali to je razreseno tako sto u tom slucaju prednost ima proces sa manjim identifikatorom
+	* prednosti ovog algoritma:
+		- obezbedjen FIFO redosled pustanja procesa u kriticnu sekciju - posten (fair) algoritam
+		- ne koristi se nikakva specijalna instrukcija procesora
+	* mane ovog algoritma:
+		- i dalje moraju da se bude svi procesi nakon sto jedan izadje iz kriticne sekcije kako bi se pustio
+		sledeci na redu u kriticnu sekciju
+		- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+int turn[1:n] = ([n] 0);
+process CS[i = 1 to n] {
+	while (true) {
+		<turn[i] = max(turn[1:n]) + 1;>  /* entry protocol */
+		for [j = 1 to n st j != i] {
+			<await(turn[j] == 0 or turn[i] < turn[j]);>
+		}
+		critical section;
+		turn[i] = 0;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+* napomena (i, j su identifikatori procesa (PID-ovi) i oni su razliciti uvek za svaki proces): 
+(turn[i], i) > (turn[j], j) 
+<=> 
+(turn[i] > turn[j]) || ((turn[i] == turn[j]) && (i > j))
+
+- Bakery algoritam za n procesa - fine-grain
+int turn[1:n] = ([n] 0);
+process CS[i = 1 to n] {
+	while (true) {
+		turn[i] = 1; turn[i] = max(turn[1:n]) + 1;  /* entry protocol */
+		for [j = 1 to n st j != i]
+			while (turn[j] != 0 and (turn[i], i) > (turn[j], j)) skip;  /* ako su jednaki turn-ovi onda prednost ima proces sa manjim pid-om */
+		critical section;
+		turn[i] = 0;  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Andersenov algoritam - coarse-grain
+	* poenta ovog algoritma je da u odnosu na ticket algoritam smanji broj procesa koji se bude 
+	(jer su to ozbiljni rezijski troskovi) nakon sto neki proces izadje iz kriticne sekcije
+	* za razliku od ticket algoritma gde svaki proces dobije svoj broj i poredi ga sa vrednoscu
+	promenljive next, ovde svaki proces dobija svoje mesto u nizu na kome ceka i uvek proverava
+	to svoje dodeljeno mesto da li je postalo true, i ako jeste, ulazi u kriticnu sekciju
+	* prednosti ovog algoritma:
+		- obezbedjen FIFO poredak pri pustanju procesa u kriticnu sekciju - posten (fair) algoritam
+		- smanjen je broj procesa koji se bude kada neki proces izadje iz kriticne sekcije kako bi se
+		proverilo koji je sledeci na redu da udje u kriticnu sekciju
+	* mane ovog algoritma: 
+		- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+		- iako je smanjio broj procesa koji se bude, opet se nece probuditi tacno jedan proces, vec skup
+		procesa koji osluskuju datu kes liniju na kojoj je promenjen element niza (niz flag se u procesoru
+		cuva tako sto se odredjeni blokovi tog niza cuvaju na odredjenim kes linijama)
+int slot = 0, flag[1:n] = ([n] false); flag[1] = true;
+process CS[i = 1 to n] {
+	int myslot;
+	while (true) {
+		<myslot = slot mod n + 1; slot = slot + 1;>
+		<await(flag[myslot]);>
+		critical section;
+		<flag[myslot] = false;
+		flag[myslot mod n + 1] = true;>
+		noncritical section;
+	}
+}
+
+- Andersenov algoritam - fine-grain
+int slot = 0, flag[1:n] = ([n] false); flag[1] = true;
+process CS[i = 1 to n] {
+	int myslot;
+	while (true) {
+		myslot = FA(slot, 1) mod n + 1;  /* entry protocol */
+		while (!flag[myslot]) skip;
+		critical section;
+		flag[myslot] = false;  /* exit protocol */  /* mnogo vazno da ovaj red bude pre sledeceg */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		flag[myslot mod n + 1] = true;
+		noncritical section;
+	}
+}
+
+- CLH algoritam - coarse-grain
+	* poenta ovog algoritma je da napravimo nesto sto odgovara ticket algoritmu, ali tako da ne moramo
+	da znamo koliko ima ukupno procesa
+	* ulancana lista je prakticno rasparcana po memoriji tako sto svaki proces zna svoj element liste -
+	prev (na njemu ceka) i naredni element liste - node (na njemu ceka neki drugi proces koji sledeci 
+	treba da udje u kriticnu sekciju)
+	* prednosti ovog algoritma:
+		- obezbedjen FIFO poredak pri pustanju procesa u kriticnu sekciju - posten (fair) algoritam
+		- ne moramo unapred znati broj procesa koji se sinhronizuju
+		- kada neki proces izadje iz kriticne sekcije, budi se SAMO ONAJ koji je sledeci na redu - ne 
+		bude se svi procesi kao kod Ticket i Bakery algoritama, a cak ni vise od jednog procesa kao kod 
+		Andersenovog algoritma
+	* mane ovog algoritma:
+		- koristi se specijalna instrukcija procesora (Get and Set)
+Node tail = (false);  /* pravi se objekat na heap-u i inicijalizuje tail.locked = false */
+process CS[i = 1 to n] {
+	while (true) {
+		Node prev, node = (true);  /* entry protocol */  /* pravi se objekat na heap-u i inicijalizuje node.locked = true; */
+		<prev = tail; tail = node;>
+		<await(!prev.locked);>
+		critical section;
+		<node.locked = false;>  /* exit protocol */  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}
+
+- Get and Set (GS) - specijalna instrukcija procesora koja vraca staru vrednost promenljive i postavlja
+novu (kao atomicnu operaciju)
+GS(var, new):
+	<int tmp = var; var = new; return tmp;>
+	
+- CLH algoritam - fine-grain
+Node tail = (false);  /* pravi se objekat na heap-u i inicijalizuje tail.locked = false */
+process CS[i = 1 to n] {
+	while (true) {
+		Node prev, node = (true);  /* entry protocol */ /* pravi se objekat na heap-u i inicijalizuje node.locked = true; */
+		prev = GS(tail, node);
+		while (prev.locked) skip;
+		critical section;
+		node.locked = false;  /* garantovana atomicnost jer iz kriticne sekcije izlazi tacno jedan proces */
+		noncritical section;
+	}
+}

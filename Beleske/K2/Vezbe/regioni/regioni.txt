@@ -1,0 +1,44 @@
+- Uslovni kriticni regioni
+	* to su kriticne sekcije nad objektima
+	* uslovni jer je moguce u njima pozivati await(bulov_izraz) funkciju koja moze da blokira tekuci proces i izbaci ga iz regiona
+	* ne postoji operacija signal kod regiona (u ovom psudokodu)
+		- regioni sami u pozadini bude procese kada se otkljuca objekat nad kojim je napravljen region
+		- regioni su implementirani u pozadini verovatno preko semafora ili nekih drugih primitiva
+	* u Javi se moraju procesi buditi pomocu operacija notify() o notifyAll(), ne mogu sami od sebe
+	* od semafora, regiona i monitora, najlakse je izbeci deadlock pomocu regiona
+	
+void funkcija() {
+	Object obj;
+	// pri ulasku u region uzima se kljuc nad objektom obj i niko drugi onda ne moze da udje u region
+	region (obj) {
+		//...
+		
+		await(bulov_izraz);
+		// bulov_izraz ne sme da ima bocne efekte i ne sme da poziva funkcije - to je zato sto isti 
+		// proces moze neogranicen broj puta proveravati ovaj bulov_izraz sve dok on ne postane true.
+		// Ako je bulov_izraz true, tekuci proces nastavlja sa izvrsavanjem unutar regiona.
+		// Ako je bulov_izraz false, tekuci proces se blokira, napusta region, i samim tim moze neki drugi proces da udje u region.
+		
+		//...
+	}
+	//...
+}
+
+- Situacija sa deadlock-om u regionima
+region(a) {
+	region(b) {
+		// kada je bulov_izraz false i proces se blokira, on pusta samo kljuc nad objektom b, dok drzi sve vreme kljuc nad objektom a,
+		// i onda niko drugi ne moze da udje u region nad objektom a, a ovaj tekuci proces je blokiran - deadlock
+		await(bulov_izraz);
+	}
+}
+
+- Regioni u Javi
+
+synchronized(t) {
+	t.notifyAll(); // ovo radimo da bi mogli drugi procesi da probaju da udju u kriticni region ako se tekuci zablokira na wait-u
+	while (!bulov_izraz) {
+		t.wait();
+	}
+	t.notifyAll(); // ovo radimo da bi mogli drugi procesi da probaju da udju u kriticni region posto ce tekuci sad da izadje
+}
