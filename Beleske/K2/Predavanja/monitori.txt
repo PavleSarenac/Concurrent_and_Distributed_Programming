@@ -421,11 +421,57 @@ monitor ReadersWriters {
 - Tehnika Passing the Condition
 	* ova tehnika kod monitora je slicna tehnici prosledjivanja stafetne palice kod semafora
 	* kod ove tehnike proces koji je zakljucio da treba da probudi neki drugi proces odradi posao za njega i onda ga probudi
-	* ova tehnika nam je od interesa kod monitora koji imaju disciplinu Signal and Continue jer tu probudjeni proces ide u entry queue
-	nakon budjenja i zato nemamo pojma kada ce on uci zaista u monitor
+	* ova tehnika nam je od interesa kod monitora koji imaju disciplinu Signal and Continue jer se tu probudjeni proces prebacuje iz reda 
+	blokiranih procesa na uslovnoj promenljivoj u entry queue nakon budjenja i zato nemamo pojma kada ce on uci zaista u monitor
+	
+* korisnika (programera sekvencijalnog koda) ne zanima kako je monitor implementiran, njemu je samo potrebno uputstvo kako se monitor 
+koristi da bi mogao da primeni sinhronizaciju na svoj kod - on ce samo pozivati metode monitora bez poznavanja njegove implementacije
 
 - Shortest Next Allocation Monitor
-
+	* prednost pri budjenju imaju procesi koji su najavili da ce koristiti resurs najkrace vreme
+	* ovo je zapravo binarni semafor realizovan preko monitora
+		- to je zato sto u ovom problemu imamo jedan resurs koji se dodeljuje procesima i na njega se upravo odnosi promenljiva
+		free koja onda ocigledno predstavlja semaforsku promenljivu jednog binarnog semafora
+		- binarni semafor je onaj cija semaforska promenljiva nije ceo broj, vec boolean vrednost
+	* metodom request se trazi ekskluzivno pravo pristupa deljenom resursu
+		- resurs procesi koriste negde izvan monitora, u delu koda koji ne sluzi za sinhronizaciju
+			* procesi nikako ne treba da obradjuju resurs unutar monitorskih metoda jer bi to pomesalo sinhronizacioni i sekvencijalni kod
+			i jos dodatno bi blokiralo potencijalno monitor na neograniceno dugo vreme i samim tim i ceo nas program
+		- uvek treba teziti eksplicitnom razdvajanju koda za sinhronizaciju (njega enkapsuliramo u monitor) i obicnog sekvencijalnog koda (njega
+		pisemo van monitorskih metoda)
+	* metodom release se proces odrice ekskluzivnog prava pristupa resursu 
+	* metode request i release lice na metode wait i signal kod semafora, medjutim ovde se dodatno metodi request prosledjuje kao parametar
+	najava procesa koliko vremena zeli da koristi dati resurs
+	* ovo resenje je primenjivo u programskim jezicima u kojima uslovna promenljiva ima prioritetni red u kojem sortira neopadajuce procese
+	prema najavljenom vremenu koriscenja resursa
+		- u Javi npr. ovo nije moguce jer bi tu turn.wait(time) imalo efekat da se proces blokira na time milisekundi sto je potpuno druga stvar
+		u odnosu na zeljeni efekat u ovom problemu
+		
+	* u slucaju da nemamo obezbedjen prioritetni red cekanja na uslovnoj promenljivoj turn, ovaj problem bismo mogli da resimo kod monitora
+	koji imaju disciplinu Signal and Continue koristeci notifyAll, tj. kada proces koji napusta monitor treba da pusti neki drugi proces u monitor,
+	on budi sve procese koji su blokirani na uslovnoj promenljivoj, ali ce se pustiti samo onaj koji je najavio najkrace vreme koriscenja resursa
+		- ovo je veoma neefikasno jer se uvek bude svi blokirani procesi na uslovnoj promenljivoj (to su veliki rezijski troskovi), a pusta se samo jedan
+		- ovo podseca na Ticket algoritam
+		
+		- ovo se takodje moze resiti i Andersenovim algoritmom (pod uslovom da znamo koliko tacno ukupno procesa ima, jer onda znamo kolika
+		duzina niza nam treba, tj. koliko uslovnih promenljivih tako da svaki proces ima svoju)
+			* koriscenjem niza gde se svaki element odnosi na po jednu uslovnu promenljivu (svaki proces ceka na svojoj uslovnoj promenljivoj) - na
+			taj nacin se smanjuju rezijski troskovi tako sto se ne bude uvek svi procesi, vec se budi samo onaj koji treba (zajedno sa drugim procesima
+			koji osluskuju istu kes liniju u nizu, ali opet je u zbiru to dosta manje probudjenih procesa nego da se svi bude)
+		- ukoliko ne znamo tacan broj procesa, Andersenov algoritam moze i da se aproksimira tako sto bismo alocirali niz odredjene duzine, pri
+		cemu bismo poslednji element niza koristili kao uslovnu promenljivu za sve procese nakon sto su ostali elementi niza svi iskorisceni - u tom
+		slucaju bismo onda imali vise procesa koji cekaju na istoj uslovnoj promenljivoj, pa bismo tu opet imali notifyAll, ali bi bili smanjeni rezijski
+		troskovi svakako zahvaljujuci ostatku niza u kom je svaka uslovna promenljiva dodeljena tacno jednom procesu
+		
+		- ovo se takodje moze resiti i CLH algoritmom, tako da svaki proces opet ima svoju uslovnu promenljivu, pri cemu ne moramo da unapred
+		znamo broj procesa jer se uslovne promenljive dinamicki prave
+			* potencijalni problem je to sto ne podrzavaju svi programski jezici dinamicko pravljenje uslovnih promenljivih (Java podrzava), vec
+			bi kod njih lista morala staticki da se unapred alocira
+				- u takvim jezicima bismo morali da aproksimiramo CLH algoritam na slican nacin kao sto smo aproksimirali Andersenov algoritam, tako
+				da poslednji element liste predstavlja uslovnu promenljivu na kojoj cekaju svi procesi koji nisu dobili svoju uslovnu promenljivu od ostatka
+				liste
+		
+		
 monitor Shortest_Job_next {
 	boolean free = true;
 	cond turn;
@@ -446,3 +492,69 @@ monitor Shortest_Job_next {
 		}
 	}
 }
+
+- Interval Timer Monitor
+	* u ovom problemu zelimo da realizujemo metodu sleep(interval) koja blokira proces na interval jedinica vremena
+	* vreme budjenja procesa se racuna kao wake_time = tod + interval, gde je tod trenutno vreme, a interval broj jedinica vremena
+	koliko proces treba da se uspava
+	* svaki proces onda ostaje zablokiran sve dok tod (tekuce vreme) ne postane vece od wake_time izracunatog za dati proces
+	* ovaj monitor ima dve metode:
+		- delay(interval); // ovo je isto kao metoda sleep(interval) koju smo do sada uvek koristili na fakultetu
+		- tick();  // ova metoda se poziva kada istekne jedan kvant vremena i tada se azurira promenljiva tod koja pokazuje tekuce vreme
+		
+	* Prekrivanje uslova - Covering condition
+		- logika ove tehnike je da se bude svi procesi i onda svaki proces proverava da li treba opet da se zablokira ili moze da nastavi izvrsavanje
+		- kod ove tehnike je pretpostavka da imamo samo jednu uslovnu promenljivu na kojoj se svi procesi blokiraju
+		- mana ove tehnike je u tome sto se bude svi procesi, a samo jedan ce moci da nastavi da se izvrsava - veliki rezijski troskovi
+		- u prve 4 verzije Jave je postojala samo jedna uslovna promenljiva, ali je od pete verzije Jave uvedeno postojanje biblioteckih uslovnih 
+		promenljivih kojih moze da bude vise i time je olaksano konkurentno programiranje u Javi
+		- ova tehnika nije pozeljna za koriscenje zbog velikih rezijskih troskova
+		- ovo resenje moze da se unapredi tako sto svaki proces kada izracuna svoj wake_time njega umetne u listu koju odrzavamo neopadajuce, pa
+		bismo pozivali signal_all samo u slucaju kada je tod postao veci od prvog elementa te liste jer to znaci da postoji bar jedan proces koji zaista
+		treba da se budi - na ovaj nacin su malo ublazena nepotrebna budjenja tako sto sada makar budimo sve procese samo onda kada bar jedan
+		proces zaista i treba da se probudi
+		
+		monitor Timer {
+			int tod = 0;
+			cond check;
+			
+			void delay(int interval) {
+				int wake_time;
+				wake_time = tod + interval;
+				while (wake_time > tod) {
+					check.wait();
+				}
+			}
+			
+			void tick() {
+				tod++;
+				check.signal_all();
+			}
+		}
+	
+	* Priority Wait Timer
+		- dosta smanjen broj procesa koji se budi jer se budi uvek onaj proces koji je sledeci na redu posto je red cekanja na uslovnoj promenljivoj
+		check realizovan kao prioritetni
+		- moze se dogoditi da vise razlicitih procesa imaju isti wake_time jer se wake_time racuna kao tod + interval, pa je moguce ako su se dva
+		procesa zablokirala u razlicitim trenucima i imaju razlicite vrednosti interval da se dogodi da su im zbirovi tod + interval isti
+			* u metodi tick procesi se bude u petlji - upravo zato sto moze da ih bude vise koji treba da se probude u istom trenutku
+	
+		monitor Timer {
+			int tod = 0;
+			cond check;
+			
+			void delay(int interval) {
+				int wake_time;
+				wake_time = tod + interval;
+				if (wake_time > tod) {
+					check.wait(wake_time);
+				}
+			}
+			
+			void tick() {
+				tod++;
+				while (!check.empty() && check.minrank() <= tod) {
+					check.signal();
+				}
+			}
+		}
