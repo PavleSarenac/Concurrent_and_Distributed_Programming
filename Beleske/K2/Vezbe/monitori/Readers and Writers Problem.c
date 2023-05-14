@@ -132,16 +132,16 @@ monitor RW_SC_FIFO {
 
 void reader() {
     while (true) {
-        RW_SW.startRead()
+        RW_SC_FIFO.startRead()
         read();
-        RW_SW.endRead();
+        RW_SC_FIFO.endRead();
     }
 }
 
 void writer() {
     while (true) {
-        RW_SW.startWrite();
+        RW_SC_FIFO.startWrite();
         write();
-        RW_SW.endWrite();
+        RW_SC_FIFO.endWrite();
     }
 }
