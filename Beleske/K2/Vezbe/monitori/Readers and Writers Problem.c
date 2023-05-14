@@ -101,7 +101,7 @@ monitor RW_SC_FIFO {
         }
         cntR++;
         next++;
-        if (q.queue() && q.minrank() % 2 == 0) {
+        if (q.queue() && q.min_rank() % 2 == 0) {
             q.signal();
         }
     }
