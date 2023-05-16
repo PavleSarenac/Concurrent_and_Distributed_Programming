@@ -1,0 +1,142 @@
+- Konkurentno programiranje
+	* procesi dele zajednicku memoriju
+	* procesi komuniciraju koristeci deljene promenljive
+	
+- Distribuirano programiranje
+	* memorija je distribuirana (procesi ne komuniciraju koriscenjem deljenih promenljivih)
+	* procesi komuniciraju iskljucivo razmenom poruka
+		- komunikacioni kanali
+		- sanducici
+		- RPC (Remote Procedure Call)
+			* u Javi se ovo naziva RMI (Remote Method Invocation)
+			* korisnik ne mora da zna uopste da se nalazi u distribuiranom racunarskom sistemu
+			* ovo predstavlja poziv metode koja se uopste ne nalazi na nasem racunaru, ali programer to uopste ne mora da zna,
+			njemu taj poziv treba da izgleda kao najobicniji poziv neke metode na njegovom racunaru - treba da bude sakrivena
+			od njega implementacija RPC
+		- rendezvous
+			* ovaj koncept smo vec razmatrali kod Sleeping Barber Problem
+	* obicno su procesi koji komuniciraju na razlicitim racunarima, ali to ni ne mora da bude slucaj
+		- npr. kod Andriod mobilnih uredjaja procesi komuniciraju razmenom poruka iako su na istom racunaru
+	* kod distribuiranog programiranja nema deljenih promenljivih
+		- upravo zato sto svaki proces ima svoju memoriju i nije ni moguce da neki proces pristupi memoriji drugog procesa
+		- zato, da bi procesi mogli da komuniciraju, definisu se operacije za slanje i prijem poruka - moracemo da se nekako zna ko salje poruku
+		i ko prima poruku, gde se oni nalaze, kako se do njih dolazi, ali se mi necemo baviti time (telekomunikacionom infrastrukturom)
+			* mi cemo da razmatramo kako se implementiraju komunikacioni kanali (sanducici) koji ce omoguciti komunikaciju izmedju procesa
+	
+- Razmena poruka (Message Passing)
+	* u konkurentnom programiranju smo se vec susreli sa problemom koji lici na razmenu poruka (Atomic Broadcast - tu je jedan proces upisivao
+	podatke u bafer, a ostali su citali)
+	* definisacemo specijalne mrezne operacije koje ukljucuju sinhronizaciju (message passing primitives)
+	* iz jednog komunikacionog kanala (sanduceta) ce tipicno jedan proces moci da cita podatke
+		- objasnjenje: ljudi obicno npr. nemaju dva telefona tako da oba telefona imaju isti broj, pa da na oba telefona primaju iste poruke
+		- dakle, nije predvidjeno da iz jednog komunikacionog kanala vise procesa cita podatke, vec samo jedan
+	* procesi ipak mogu i da dele nekad komunikacione kanale
+		- kanali su tipicno jedini objekat kog procesi mogu da dele u distribuiranom programiranju
+	* razmena poruka (Message Passing) omogucava komunikaciju izmedju posiljaoca (sender) i primaoca (receiver) koriscenjem komunikacionog
+	kanala
+	* za sad cemo se baviti samo Unicast komunikacijom (izmedju dva procesa)
+	* u distribuiranom programiranju nemamo semafore, monitore i regione, vec koristimo komunikacione kanale
+	
+	* osobine komunikacionog kanala:
+		- cuva se redosled poruka (red postuje FIFO)
+		- omogucen je atomski pristup komunikacionom kanalu
+			* imacemo dve metode pomocu kojih se poruka stavlja u kanal (slanje poruke) ili dohvata iz kanala (prijem poruke)
+		- moze se specificirati tip podatka koji se salje
+		- komunikacioni kanali vode racuna o greskama koje mogu da se pojave
+		- pretpostavicemo u nasim problemima da su komunikacioni kanali beskonacne velicine, ali svakako oni nisu predvidjeni da cuvaju veliku kolicinu
+		podataka (npr. nikako ne bismo smeli da komunikacioni kanal koristimo kao bafer za cuvanje podataka kod Producer Consumer problema)
+			* ukoliko preteramo sa kolicinom podataka koje pokusamo da smestimo u komunikacioni kanal, metoda za slanje poruke ce emitovati
+			gresku i reci nam da slanje nije uspelo da se realizuje
+			
+	* postoje razne varijante razmene poruka (message passing-a)
+		- asinhrona (u Javi) ili sinhrona komunikacija (u CSP-u)
+			* kod asinhrone komunikacije poruka se posalje i proces odmah nastavlja dalje izvrsavanje - uopste ne ceka da drugi proces primi poruku
+			* kod sinhrone komunikacije poruka se posalje i proces koji je poslao ceka dok druga strana ne javi da je primila poruku (rendezvous)
+		- staticko (direktno) ili dinamicko (indirektno) imenovanje
+			* kod statickog imenovanja unapred mora da se zna kome se salje poruka
+			* kod dinamickog imenovanja ne mora unapred da se zna kome se salje poruka, vec se to dinamicki odredjuje
+				- danas se najvise koristi dinamicko imenovanje, ali opet dosta aplikacija koristi staticko imenovanje jer znaju uvek s kim treba da
+				komuniciraju (npr. YouTube, WhatsApp, Messenger uglavnom komuniciraju sa nekoliko fiksnih adresa kako bi pruzili uslugu korisniku)
+			* protok informacija u jednom ili dva smera
+				- u Javi cemo imati koncept socket-a (prikljucnica) koji ce se otvoriti izmedju dve strane koje komuniciraju i preko kog ce procesi
+				moci da primaju i salju poruke (socket-i nam omogucavaju protok informacija u oba smera)
+		- blokirajuci ili neblokirajuci komunikacioni kanali
+		- razlicit broj procesa moze biti prikacen na jedan komunikacioni kanal:
+			* 1-1 (Point-to-Point (P2P))
+				- jedan proces salje poruku drugom procesu
+			* N-1
+				- vise razlicitih procesa moze da salje poruke preko istog komunikacionog kanala nekom drugom procesu (npr. vise razlicitih klijenata
+				koji salju zahteve jednom istom serveru)
+			* 1-N
+				- ovo je u sustini broadcast - jedan proces salje poruku na komunikacioni kanal sa kog moze vise drugih procesa da je primi
+			* N-N
+				- vise procesa moze da salje poruke na isti komunikacioni kanal, a takodje moze i vise procesa da prima poruke sa tog kanala
+					* ovo se koristi kod nekih serverskih resenja da bi mogla komunikacija da se sprovede brze
+					
+- Asinhrona razmena poruka (Asynchronous Message Passing)
+	* deklaracija komunikacionog kanala (u njega se smesta poruka)
+		- chan nazivKanala(type1 id1, ..., typen idn);
+		- neophodno je precizirati tipove (to su tipovi podataka koji ce se slati putem kanala), a pisanje id-eva je opciono
+	* poruke se salju i primaju pomocu komunikacionih primitiva (metoda) send i receive
+		- send nazivKanala(expr1, ..., exprn);
+			* expr1, ... exprn su argumenti koji se salju putem kanala (to su neki izrazi koji moraju da se sracunaju na strani posiljaoca i onda se 
+			rezultati salju po vrednosti primaocu (ne mozemo da saljemo nista po referenci, sve se salje po vrednosti))
+			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
+			* metoda send kod asinhrone razmene poruka je neblokirajuca - to znaci da posiljalac odmah nastavlja svoje izvrsavanje nakon slanja
+			poruke, dakle ne ceka da je primalac zaista i primi
+			* u nasim problemima pretpostavicemo da je kanal neogranicenog kapaciteta
+				- medjutim, svejedno cemo paziti da ne preteramo sa kolicinom podataka koje stavimo u nas kanal
+					* npr. kod problema Producer Consumer necemo u kanal odmah ubacivati poruku, nego cemo prvo traziti dozvolu, tj. da se proveri
+					da li ima mesta u kanalu, pa tek ako ima onda cemo slati poruku
+		- receive var(var1, ..., varn);
+			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
+			* metoda receive kod asinhrone razmene poruka je blokirajuca - proces koji ceka da primi poruku se blokira sve dok je ne primi
+	* ponekad postoji metoda empty(c) koja vraca true ukoliko je nas komunikacioni kanal prazan
+		- ona moze da bude korisna da bi proces mogao, ukoliko je kanal prazan, da uzme da radi nesto korisno umesto da ceka poruku u blokiranom
+		stanju, a nece je primiti sigurno dok je kanal prazan
+		- necemo koristiti ovu metodu u nasim resenjima, nece biti potrebe
+	* poredjenje semafora sa asinhronom razmenom poruka:
+		- semafor <=> kanal
+		- signal <=> send
+		- wait <=> receive
+		- vrednost interne semaforske promenljive <=> broj poruka u kanalu
+	* komunikacioni kanal dakle moze da se iskoristi kao semafor za sinhronizaciju procesa
+	
+- Filteri
+	* filter je proces koji ima:
+		- jedan ili vise ulaznih kanala ili
+		- jedan ili vise izlaznih kanala
+	* filter sluzi da podaci dodju do njega preko jednog ili vise ulaznih kanala, zatim filter moze te podatke da izbaci, prosledi ih dalje 
+	nepromenjene ili da ih nekako obradi pa onda tek prosledi dalje opet preko jednog ili vise izlaznih kanala
+	* primer filtera su tokovi (stream) i protok podataka (dataflow)
+	
+- Filterski proces - mailbox
+	* mozemo ga nazvati agregator - on skuplja vise podataka koji dolaze, i kada se napuni njegov interni bafer gde smesta te podatke, onda se
+	oni prosledjuju nekom drugom procesu svi odjednom
+	
+const int MAXLINE = ...;  // kapacitet internog bafera	
+chan inputChannel(char);
+chan outputChannel(char[MAXLINE]);
+
+void char_to_line() {
+	char line[MAXLINE];
+	int i = 0;
+	while (true) {
+		receive input(line[i]);
+		while (line[i] != 'CR' && i < MAXLINE) {
+			i++;
+			receive input(line[i]);
+		}
+		line[i] = 'EOL';  // EOL - End Of Line
+		send output(line);
+		i = 0;
+	}
+}
+
+- Filteri - mreza sa sortiranje
+	* ulazni kanal prima n vrednosti koje treba da budu sortirane, a na izlazni kanal se salju sortirane vrednosti
+	* na 3 razlicita nacina mozemo da znamo koliko ima vrednosti koje treba sortirati:
+		1) n moze da bude poznato unapred kao neka konstanta (u compile time-u je znamo)
+		2) n moze da bude poslato kao prva vrednost u nizu
+		3) moze da se zna kad smo stigli do kraja primljenog niza tako sto proces koji salje niz postavi na kraju neku specijalnu vrednost (sentinel
+		value na osnovu koje znamo da smo dosli do kraja - npr. 'EOS' - End Of Stream ili 'EOL' - End Of Line)
