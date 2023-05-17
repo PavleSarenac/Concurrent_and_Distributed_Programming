@@ -1,0 +1,116 @@
+- Prosledjivanje poruka
+    * komunikacioni servisi u jednom distribuiranom sistemu realizovani su na bazi sanducica tipa mbx za prenos poruka tipa msg
+    * pretpostavicemo da tip msg obuhvata cele brojeve, strukture i specijalni simbol ack za potvrdjivanje prijema
+    * u neko postansko sanduce uvek bilo koji proces moze da ubaci poruku
+    * iz jednog postanskog sanduceta moze da cita samo jedan proces (onaj kome je namenjeno sanduce)
+    * jedan proces moze da ima i vise razlicitih sanducica, ali nekada mozemo eksplicitno da navedemo da jedan proces moze da cita
+    samo iz jednog sanduceta, pa onda to lici na aktivne monitore (jer aktivni monitori imaju samo jedan ulazni kanal i jedan tok
+    kontrole)
+    * cesto ce biti potrebno da neki proces ima ulogu koordinatora posto u distribuiranom programiranju ne postoje deljene promenljive (to moze biti neki postojeci proces, ili moze neki novi da se napravi koji bi postojao iskljucivo zbog te koordinacije - treba pokusati da se izbegne to i ako je moguce da se iskoristi da neki vec postojeci proces bude koordinator)
+    * kod prosledjivanja poruka preko sanduceta cemo imati neimenovano slanje poruka - moracemo nekako indirektno da imenujemo sanduce
+    * za postansko sanduce smatramo da je neogranicenog kapaciteta
+    * pretpostavicemo da se sanduce automatski samo inicijalizuje i stvori prazno kada ga kreiramo
+    * kod prosledjivanja poruka preko sanduceta mozemo da imamo i sinhronu i asinhronu komunikaciju
+    * operacije mbx_put i mbx_get rade po FIFO principu i nasi sanducici imaju FIFO strukturu, ali posto je rec o distribuiranom programiranju, ne mozemo da garantujemo da se poruke ipak nece nekako izmesati prilikom slanja
+    
+    * osnovne operacije sa sanducicima su:
+        - mbx_put(m: msg, box: mbx)
+            * funkcija za asinhrono slanje poruke m tipa msg u postansko sanduce box tipa mbx (dakle proces kada posalje poruku ne ceka da je druga strana primi vec odmah nastavlja dalje izvrsavanje)
+        - mbx_get(var m: msg, box: mbx, t: time, var status: boolean)
+            * ova funkcija moze da bude i za asinhrono i za sinhrono primanje poruka
+            * kljucna rec var naglasava da ce taj parametar biti povratna vrednost funkcije
+            * promenljiva m tipa msg ce biti povratna vrednost i ona predstavlja nasu poruku koju dohvatamo iz sanduceta box tipa mbx
+            * u zavisnosti od vrednosti parametra time, funkcija mbx_get ce raditi asinhrono ili sinhrono primanje poruka
+                - ako parametar t tipa time ima vrednost 0, imacemo asinhrono primanje poruka - to znaci da proces pokusa da dohvati poruku, pa ako ona postoji u tom trenutku bice primljena, a ako ne proces nastavlja dalje i poruka nece biti primljena
+                - ako parametar t tipa time ima vrednost inf, imacemo sinhrono primanje poruka - proces ce da se blokira i ceka
+                neograniceno sve dok ne primi poruku
+                - parametar time moze i da ima neku vrednost izmedju 0 i inf, i to onda znaci da ce proces da se blokira na maksimalno t jedinica vremena da bi sacekao da primi poruku i nastavice dalje svoje izvrsavanje nezavisno od toga da li je za to vreme primio poruku ili ne
+            * promenljiva status tipa boolean ce biti povratna vrednost i ona govori da li je poruka uspesno primljena ili nije
+                - korisno kod asinhronog primanja poruka da bismo znali jel poruka primljena
+
+* Razmotrimo jednostavan sistem koji sadrzi samo dva procesa - S i R.
+    1) S asinhrono salje celobrojnu vrednost i, a R izvrsava obican prijem (basic receive).
+        procedure send(i: integer);
+        var m: msg;
+        begin
+            m := i;
+            mbx_put(m, A);
+        end;
+
+        procedure receive(var i: integer);
+        var m: msg; st: boolean;
+        begin
+            mbx_get(m, A, INF, st);
+            i := m;
+        end;
+    
+    2) Asinhrono slanje, uslovni prijem.
+        procedure send(i: integer);
+        var m: msg;
+        begin
+            m := i;
+            mbx_put(m, A);
+        end;
+
+        function receive(var i: integer): boolean;
+        var m: msg; st: boolean;
+        begin
+            mbx_get(m, A, 0, st);
+            if st then i := m;
+            receive := st;
+        end;
+
+    3) Asinhrono slanje, vremenski uslovljen prijem.
+        procedure send(i: integer);
+        var m: msg;
+        begin
+            m := i;
+            mbx_put(m, A);
+        end;
+
+        function receive(var i: integer, d: time): boolean;
+        var m: msg; st: boolean;
+        begin
+            mbx_get(m, A, d, st);
+            if st then i := m;
+            receive := st;
+        end;
+
+    4) Sinhrono slanje, obican prijem.
+        function send(i: integer): boolean;
+        var m: msg; st: boolean;
+        begin
+            m := i;
+            mbx_put(m, A);
+            mbx_get(m, B, INF, st);
+            send := (m = ack);
+        end;
+
+        procedure receive(var i: integer);
+        var m: msg; st: boolean;
+        begin
+            mbx_get(m, A, INF, st);
+            i := m;
+            m := ack;
+            mbx_put(m, B);
+        end;
+
+    5) Bidirekciona transakcija tipa "zahtev-odgovor".
+        procedure rq(i: integer, var x: integer, d: time);
+        var m: msg; st: boolean;
+        begin
+            m := i;
+            mbx_put(m, A);
+            mbx_get(m, B, d, st);
+            if st then x := m;
+            else x := 0;
+        end;
+
+        procedure reply;
+        var m: msg; i: integer; st: boolean;
+        begin
+            mbx_get(m, A, INF, st);
+            i := m;
+            m := f(i);
+            mbx_put(m, B);
+        end;
