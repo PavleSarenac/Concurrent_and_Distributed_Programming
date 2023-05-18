@@ -30,87 +30,104 @@
 
 * Razmotrimo jednostavan sistem koji sadrzi samo dva procesa - S i R.
     1) S asinhrono salje celobrojnu vrednost i, a R izvrsava obican prijem (basic receive).
-        procedure send(i: integer);
-        var m: msg;
-        begin
-            m := i;
-            mbx_put(m, A);
-        end;
+        void send(int i) {
+            msg m;
 
-        procedure receive(var i: integer);
-        var m: msg; st: boolean;
-        begin
+            m = i;
+            mbx_put(m, A);
+        }
+
+        void receive(int i) {
+            msg m;
+            bool st;
+
             mbx_get(m, A, INF, st);
-            i := m;
-        end;
+            i = m;
+        }
     
     2) Asinhrono slanje, uslovni prijem.
-        procedure send(i: integer);
-        var m: msg;
-        begin
-            m := i;
-            mbx_put(m, A);
-        end;
+        void send(int i) {
+            msg m;
 
-        function receive(var i: integer): boolean;
-        var m: msg; st: boolean;
-        begin
+            m = i;
+            mbx_put(m, A);
+        }
+
+        bool receive(int i) {
+            msg m;
+            bool st;
+
             mbx_get(m, A, 0, st);
-            if st then i := m;
-            receive := st;
-        end;
+            if (st) {
+                i = m;
+            }
+            return st;
+        }
 
     3) Asinhrono slanje, vremenski uslovljen prijem.
-        procedure send(i: integer);
-        var m: msg;
-        begin
-            m := i;
-            mbx_put(m, A);
-        end;
+        void send(int i) {
+            msg m;
 
-        function receive(var i: integer, d: time): boolean;
-        var m: msg; st: boolean;
-        begin
-            mbx_get(m, A, d, st);
-            if st then i := m;
-            receive := st;
-        end;
+            m = i;
+            mbx_put(m, A);
+        }
+
+        bool receive(int i, int time) {
+            msg m;
+            bool st;
+
+            mbx_get(m, A, time, st);
+            if (st) {
+                i = m;
+            }
+            return st;
+        }
 
     4) Sinhrono slanje, obican prijem.
-        function send(i: integer): boolean;
-        var m: msg; st: boolean;
-        begin
-            m := i;
+        bool send(int i) {
+            msg m;
+            bool st;
+
+            m = i;
             mbx_put(m, A);
             mbx_get(m, B, INF, st);
-            send := (m = ack);
-        end;
+            m = ack;
+            return m;
+        }
 
-        procedure receive(var i: integer);
-        var m: msg; st: boolean;
-        begin
+        bool receive(int i) {
+            msg m;
+            bool st;
+
             mbx_get(m, A, INF, st);
-            i := m;
-            m := ack;
+            i = m;
+            m = ack;
             mbx_put(m, B);
-        end;
+        }
 
     5) Bidirekciona transakcija tipa "zahtev-odgovor".
-        procedure rq(i: integer, var x: integer, d: time);
-        var m: msg; st: boolean;
-        begin
-            m := i;
-            mbx_put(m, A);
-            mbx_get(m, B, d, st);
-            if st then x := m;
-            else x := 0;
-        end;
+        void request(int i, int x, int time) {
+            msg m;
+            bool st;
 
-        procedure reply;
-        var m: msg; i: integer; st: boolean;
-        begin
+            m = i;
+            mbx_put(m, A);
+            mbx_get(m, B, time, st);
+            if (st) {
+                x = m;
+            }
+            else {
+                x = 0;
+            }
+        }
+
+        void reply() {
+            msg m;
+            int i;
+            bool st;
+
             mbx_get(m, A, INF, st);
-            i := m;
-            m := f(i);
+            i = m;
+            m = f(i);
             mbx_put(m, B);
-        end;
+        }

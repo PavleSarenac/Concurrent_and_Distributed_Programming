@@ -72,6 +72,7 @@ void initiatiorGraphNode(int nodeId) {
     bool status;
     int firstNodeId = Math.floor(Math.random() * N);
     bool graph[N][N];
+    // Pretpostavka: funkcija createSpanningTree izmeni originalnu matricu susednosti grafa tako sto izbaci grane (postavljajuci odgovarajuce elemente matrice na false) koje nisu potrebne i na taj nacin formira obuhvatno stablo od naseg inicijalnog grafa.
     message.spanningTree = createSpanningTree(graph);
     message.senderId = nodeId;
 
