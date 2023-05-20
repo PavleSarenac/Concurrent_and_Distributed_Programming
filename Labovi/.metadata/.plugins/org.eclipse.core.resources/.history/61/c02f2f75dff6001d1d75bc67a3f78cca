@@ -1,7 +1,0 @@
-package rs.ac.bg.etf.kdp.sanja2;
-
-public class SemaphoreAtomicBroadcastBuffer implements AtomicBroadcastBuffer<T> {
-
-	
-	
-}
