@@ -1,0 +1,10 @@
+package rs.ac.bg.etf.kdp.sanja.guiSwingWorker;
+
+public class GuiTest {
+
+	public static void main(String[] args) {
+		int m = 2;  // broj proizvodjaca (producer-a)
+		int n = 3;  // broj potrosaca (consumer-a)
+	}
+	
+}
