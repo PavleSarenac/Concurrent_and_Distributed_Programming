@@ -43,8 +43,7 @@ void consumer(int id) {
 
 /*
 - Viseelementni bafer
-	* proizvodjac stavlja proizvode u bafer velicine B, i svih N potrosaca treba da procita proizvode sa svih pozicija iz tog bafera, dakle svaka
-	pozicija u baferu treba da bude procitana po N puta
+	* proizvodjac stavlja proizvode u bafer velicine B, i svih N potrosaca treba da procita proizvode sa svih pozicija iz tog bafera, dakle svaka pozicija u baferu treba da bude procitana po N puta
 */
 
 const int N = ...;  // broj potrosaca (consumer-a)

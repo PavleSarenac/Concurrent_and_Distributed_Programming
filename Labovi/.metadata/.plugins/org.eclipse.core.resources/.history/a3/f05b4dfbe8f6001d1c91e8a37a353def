@@ -1,0 +1,12 @@
+package rs.ac.bg.etf.kdp.sanja2;
+
+public class Test {
+
+	public static void main(String[] args) {
+		private int N = 3;
+		private int B = 5;
+		
+		
+	}
+	
+}

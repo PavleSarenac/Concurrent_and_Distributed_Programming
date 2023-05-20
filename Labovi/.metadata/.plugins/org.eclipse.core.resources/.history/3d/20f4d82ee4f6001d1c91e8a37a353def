@@ -1,0 +1,41 @@
+package rs.ac.bg.etf.kdp.sanja2;
+
+import java.util.concurrent.Semaphore;
+
+public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<T> {
+
+	private int N; // broj potrosaca (consumer-a)
+	private int B; // velicina bafera
+	private int cnt[]; // niz brojaca za svaku poziciju u baferu - broji se za svaku poziciju u baferu
+						// koliko potrosaca je citalo sa te pozicije
+	private T buffer[];
+	private int writeIndex, readIndex[];
+
+	private Semaphore mutex[];
+	private Semaphore empty;
+	private Semaphore full[];
+
+	public SemaphoreAtomicBroadcastBuffer(int capacity, int n) {
+		this.N = n;
+		this.B = capacity;
+		this.cnt = new int[B];
+
+		this.writeIndex = 0;
+		this.readIndex = new int[N];
+
+		this.empty = new Semaphore(B);
+	}
+
+	@Override
+	public void put(T item) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public T get() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}

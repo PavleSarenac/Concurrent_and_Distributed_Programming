@@ -1,0 +1,30 @@
+package rs.ac.bg.etf.kdp.sanja;
+
+import java.util.concurrent.Semaphore;
+
+public class Producer extends Thread {
+
+	private int buffer;
+	private Semaphore empty;
+	private Semaphore full;
+
+	public Producer(String name, int buffer, Semaphore empty, Semaphore full) {
+		super(name);
+		this.buffer = buffer;
+		this.empty = empty;
+		this.full = full;
+	}
+
+	@Override
+	public void run() {
+		super.run();
+		while (true) {
+
+		}
+	}
+	
+	private int produce() {
+		sleep((int)(Math.random()*2000));
+	}
+
+}

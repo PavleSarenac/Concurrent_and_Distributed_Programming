@@ -1,0 +1,9 @@
+package rs.ac.bg.etf.kdp.sanja;
+
+public class Consumer extends Thread {
+
+	public Consumer(String name) {
+		super(name);
+	}
+
+}

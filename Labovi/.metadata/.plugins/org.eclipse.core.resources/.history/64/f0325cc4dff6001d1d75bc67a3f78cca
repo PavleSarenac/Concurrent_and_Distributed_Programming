@@ -1,0 +1,19 @@
+package rs.ac.bg.etf.kdp.sanja2;
+
+public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<T> {
+	
+	private int N;  // broj potrosaca (consumer-a)
+
+	@Override
+	public void put(T item) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public T get() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}
