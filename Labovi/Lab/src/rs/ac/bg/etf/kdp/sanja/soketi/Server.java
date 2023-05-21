@@ -1,4 +1,4 @@
-package rs.ac.bg.etf.kdp.sanja.net;
+package rs.ac.bg.etf.kdp.sanja.soketi;
 
 import java.io.IOException;
 import java.net.ServerSocket;

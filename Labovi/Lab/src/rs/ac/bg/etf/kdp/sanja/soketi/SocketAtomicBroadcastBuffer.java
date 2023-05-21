@@ -1,4 +1,4 @@
-package rs.ac.bg.etf.kdp.sanja.net;
+package rs.ac.bg.etf.kdp.sanja.soketi;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -17,7 +17,7 @@ public class SocketAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<T> 
 		this.serverPort = serverPort;
 	}
 	
-	// Svi objekti koji se salju kao poruka moraju da budu Serializable.
+	// Svi objekti koji se salju kao poruka moraju da implementiraju interfejs Serializable.
 
 	// Za slanje poruka, najbolje je da koristimo writeObject jer ta metoda garantuje da poruka nece biti baferisana i odlozena
 	// da se posalje kasnije, vec da ce biti poslata odmah. Kada bismo koristili neku drugu metodu koja ce potencijalno da

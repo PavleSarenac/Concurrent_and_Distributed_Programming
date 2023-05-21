@@ -1,4 +1,4 @@
-package rs.ac.bg.etf.kdp.sanja.net;
+package rs.ac.bg.etf.kdp.sanja.soketi;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -26,12 +26,16 @@ public class RequestHandler extends Thread {
 		// bismo obezbedili da se clientSocket
 		// automatski zatvori nakon zavrsetka metode run.
 		try (Socket client = this.clientSocket;
-				ObjectOutputStream outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-				ObjectInputStream inputStream = new ObjectInputStream(clientSocket.getInputStream());) {
+				ObjectOutputStream outputStream = new ObjectOutputStream(client.getOutputStream());
+				ObjectInputStream inputStream = new ObjectInputStream(client.getInputStream());) {
 			
+			// Ovo je broj porta klijenta kojeg mu operativni sistem implicitno dodeljuje za komunikaciju sa serverom.
 			System.out.println("Client port: " + client.getPort());
+			// Ovo je broj porta na kom server osluskuje zahteve i na koji se klijent povezao.
 			System.out.println("Client local port: " + client.getLocalPort());
+			// Ovo je IP adresa klijenta.
 			System.out.println("Client address: " + client.getInetAddress());
+			// Ovo je IP adresa servera.
 			System.out.println("Client local address: " + client.getLocalAddress());
 
 			// Vazno je napomenuti da sve sto se salje izmedju procesa u distribuiranoj aplikaciji se salje po vrednosti,

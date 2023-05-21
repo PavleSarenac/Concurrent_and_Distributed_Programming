@@ -1,6 +1,6 @@
 package rs.ac.bg.etf.kdp.sanja.gui;
 
-import rs.ac.bg.etf.kdp.sanja.net.SocketAtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.soketi.SocketAtomicBroadcastBuffer;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.SemaphoreAtomicBroadcastBuffer;
