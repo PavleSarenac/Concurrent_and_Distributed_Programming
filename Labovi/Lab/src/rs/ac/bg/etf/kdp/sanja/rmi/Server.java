@@ -31,7 +31,12 @@ public class Server {
 			// Za broj porta stavljamo 0 da bi se on dinamicki dodelio i da mi ne bismo brinuli o tome (nece biti zaista broj porta 0, vec 
 			// neki drugi koji dodeli operativni sistem). Najbolje je tako uraditi jer je za svaki udaljeni objekat potreban po jedan port
 			// preko kog moze da mu se pristupi, pa da ne napravimo neku gresku kada ima vise udaljenih objekata - da budemo sigurni da svaki
-			// ima svoj port. 
+			// ima svoj port.
+			
+			// Za svaki zahtev za dohvatanjem ovog objekta ce RMI sistem u pozadini iskoristiti jednu nit iz svog pool-a spremnih niti
+			// u okviru koje ce se izvrsavati sve operacije koje klijent pozove nad nasim udaljenim objektom. Na taj nacin ce klijent
+			// imati privid kao da se sve to izvrsava na njegovom racunaru, a zapravo sve sto on radi se izvrsava u okviru jedne niti
+			// na potpuno drugom racunaru, tj. serveru.
 			RABB<Message<String>> stub = (RABB<Message<String>>) UnicastRemoteObject.exportObject(buffer, 0);
 			
 			// Na ovaj nacin omogucavamo da klijenti mogu preko porta 4001 da pristupe registru udaljenih referenci - server osluskuje
