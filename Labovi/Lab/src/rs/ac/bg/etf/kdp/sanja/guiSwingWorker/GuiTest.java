@@ -1,5 +1,6 @@
 package rs.ac.bg.etf.kdp.sanja.guiSwingWorker;
 
+import rs.ac.bg.etf.kdp.sanja.rmi.ClientRemoteAtomicBroadcastBuffer;
 import rs.ac.bg.etf.kdp.sanja.soketi.SocketAtomicBroadcastBuffer;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
@@ -17,7 +18,10 @@ public class GuiTest {
 		//AtomicBroadcastBuffer<Message<String>> buffer = new SemaphoreAtomicBroadcastBuffer<>(bufferCapacity, n);
 		
 		// Bafer za lab 2 (distribuirano programiranje)
-		AtomicBroadcastBuffer<Message<String>> buffer = new SocketAtomicBroadcastBuffer<>("localhost", 4001);
+		//AtomicBroadcastBuffer<Message<String>> buffer = new SocketAtomicBroadcastBuffer<>("localhost", 4001);
+		
+		// Bafer za lab2 (distribuirano programiranje - RMI)
+		AtomicBroadcastBuffer<Message<String>> buffer = new ClientRemoteAtomicBroadcastBuffer<>("localhost", 4001);
 		
 		Put p[] = new Put[m];
 		Get c[] = new Get[n];

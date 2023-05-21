@@ -24,8 +24,8 @@ public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<
 	private Semaphore full[];
 
 	@SuppressWarnings("unchecked")
-	public SemaphoreAtomicBroadcastBuffer(int capacity, int n) {
-		this.N = n;
+	public SemaphoreAtomicBroadcastBuffer(int capacity, int numberOfConsumers) {
+		this.N = numberOfConsumers;
 		this.B = capacity;
 		this.cnt = new int[B];
 		this.buffer = (T[]) new Object[B];
@@ -35,14 +35,14 @@ public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<
 		this.mutex = new Semaphore[B];
 		for (int i = 0; i < B; i++) {
 			cnt[i] = 0;
-			mutex[i] = new Semaphore(1);
+			mutex[i] = new Semaphore(1, true);  // Drugim parametrom true smo podesili da nam svi semafori postuju FIFO, podrazumevano ne postuju.
 		}
-		this.mutexP = new Semaphore(1);
-		this.empty = new Semaphore(B);
+		this.mutexP = new Semaphore(1, true);
+		this.empty = new Semaphore(B, true);
 		this.full = new Semaphore[N];
 		for (int i = 0; i < N; i++) {
 			readIndex[i] = 0;
-			full[i] = new Semaphore(0);
+			full[i] = new Semaphore(0, true);
 		}
 	}
 
