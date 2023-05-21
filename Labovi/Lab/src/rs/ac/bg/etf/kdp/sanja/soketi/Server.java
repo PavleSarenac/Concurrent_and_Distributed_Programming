@@ -4,9 +4,9 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.SemaphoreAtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.SemaphoreABB;
 
 public class Server {
 
@@ -15,7 +15,7 @@ public class Server {
 		int serverPort = Integer.parseInt(args[0]);
 		int bufferCapacity = 5;
 		int numberOfPossibleClients = 3;
-		AtomicBroadcastBuffer<Message<String>> buffer = new SemaphoreAtomicBroadcastBuffer<>(bufferCapacity, numberOfPossibleClients);
+		ABB<Message<String>> buffer = new SemaphoreABB<>(bufferCapacity, numberOfPossibleClients);
 
 		try (ServerSocket serverSocket = new ServerSocket(serverPort)) {
 			System.out.println("Server started...");

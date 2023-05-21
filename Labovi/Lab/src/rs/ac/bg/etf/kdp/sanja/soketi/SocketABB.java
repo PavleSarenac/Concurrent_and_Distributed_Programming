@@ -4,14 +4,14 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 
-public class SocketAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<T> {
+public class SocketABB<T> implements ABB<T> {
 
 	private String serverHost;
 	private int serverPort;
 
-	public SocketAtomicBroadcastBuffer(String serverHost, int serverPort) {
+	public SocketABB(String serverHost, int serverPort) {
 		super();
 		this.serverHost = serverHost;
 		this.serverPort = serverPort;

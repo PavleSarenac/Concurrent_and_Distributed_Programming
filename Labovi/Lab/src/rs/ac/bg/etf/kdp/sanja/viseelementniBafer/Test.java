@@ -6,7 +6,7 @@ public class Test {
 		int B = 5;  // kapacitet bafera
 		int N = 3;  // broj potrosaca (consumer-a)
 		
-		AtomicBroadcastBuffer<Integer> buffer = new SemaphoreAtomicBroadcastBuffer<>(B, N);
+		ABB<Integer> buffer = new SemaphoreABB<>(B, N);
 		
 		Producer p1  = new Producer("P1", buffer);
 		p1.start();

@@ -2,9 +2,9 @@ package rs.ac.bg.etf.kdp.sanja.viseelementniBafer;
 
 public class Producer extends Thread {
 
-	AtomicBroadcastBuffer<Integer> buffer;
+	ABB<Integer> buffer;
 
-	public Producer(String name, AtomicBroadcastBuffer<Integer> buffer) {
+	public Producer(String name, ABB<Integer> buffer) {
 		super(name);
 		this.buffer = buffer;
 	}

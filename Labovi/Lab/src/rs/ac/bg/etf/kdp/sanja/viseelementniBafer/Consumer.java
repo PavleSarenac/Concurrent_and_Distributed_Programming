@@ -3,9 +3,9 @@ package rs.ac.bg.etf.kdp.sanja.viseelementniBafer;
 public class Consumer extends Thread {
 
 	private int id;
-	AtomicBroadcastBuffer<Integer> buffer;
+	ABB<Integer> buffer;
 
-	public Consumer(String name, int id, AtomicBroadcastBuffer<Integer> buffer) {
+	public Consumer(String name, int id, ABB<Integer> buffer) {
 		super(name);
 		this.id = id;
 		this.buffer = buffer;

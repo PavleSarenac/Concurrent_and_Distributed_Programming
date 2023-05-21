@@ -1,10 +1,10 @@
 package rs.ac.bg.etf.kdp.sanja.guiSwingWorker;
 
-import rs.ac.bg.etf.kdp.sanja.rmi.ClientRemoteAtomicBroadcastBuffer;
-import rs.ac.bg.etf.kdp.sanja.soketi.SocketAtomicBroadcastBuffer;
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.rmi.ClientRABB;
+import rs.ac.bg.etf.kdp.sanja.soketi.SocketABB;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.SemaphoreAtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.SemaphoreABB;
 
 @SuppressWarnings("unused")
 public class GuiTest {
@@ -15,13 +15,13 @@ public class GuiTest {
 		int bufferCapacity = 5;
 		
 		// Bafer za lab 1 (konkurentno programiranje)
-		//AtomicBroadcastBuffer<Message<String>> buffer = new SemaphoreAtomicBroadcastBuffer<>(bufferCapacity, n);
+		//ABB<Message<String>> buffer = new SemaphoreABB<>(bufferCapacity, n);
 		
-		// Bafer za lab 2 (distribuirano programiranje)
-		//AtomicBroadcastBuffer<Message<String>> buffer = new SocketAtomicBroadcastBuffer<>("localhost", 4001);
+		// Bafer za lab 2 (distribuirano programiranje - soketi)
+		//ABB<Message<String>> buffer = new SocketABB<>("localhost", 4001);
 		
 		// Bafer za lab2 (distribuirano programiranje - RMI)
-		AtomicBroadcastBuffer<Message<String>> buffer = new ClientRemoteAtomicBroadcastBuffer<>("localhost", 4001);
+		ABB<Message<String>> buffer = new ClientRABB<>("localhost", 4001);
 		
 		Put p[] = new Put[m];
 		Get c[] = new Get[n];

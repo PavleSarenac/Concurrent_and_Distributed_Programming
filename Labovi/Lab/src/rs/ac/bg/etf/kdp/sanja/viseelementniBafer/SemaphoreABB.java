@@ -2,7 +2,7 @@ package rs.ac.bg.etf.kdp.sanja.viseelementniBafer;
 
 import java.util.concurrent.Semaphore;
 
-public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<T> {
+public class SemaphoreABB<T> implements ABB<T> {
 
 	// Broj potrosaca (consumer-a).
 	private int N;
@@ -24,7 +24,7 @@ public class SemaphoreAtomicBroadcastBuffer<T> implements AtomicBroadcastBuffer<
 	private Semaphore full[];
 
 	@SuppressWarnings("unchecked")
-	public SemaphoreAtomicBroadcastBuffer(int capacity, int numberOfConsumers) {
+	public SemaphoreABB(int capacity, int numberOfConsumers) {
 		this.N = numberOfConsumers;
 		this.B = capacity;
 		this.cnt = new int[B];

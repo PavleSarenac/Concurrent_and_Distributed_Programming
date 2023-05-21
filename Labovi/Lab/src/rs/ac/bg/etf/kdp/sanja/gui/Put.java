@@ -9,7 +9,7 @@ import javax.swing.JFrame;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.TextMessage;
 
@@ -19,7 +19,7 @@ public class Put extends JFrame {
 	JButton jb;
 	JTextArea jta;
 
-	public Put(AtomicBroadcastBuffer<Message<String>> buffer) {
+	public Put(ABB<Message<String>> buffer) {
 		super("Put");
 		jb = new JButton("Put");
 		jta = new JTextArea();

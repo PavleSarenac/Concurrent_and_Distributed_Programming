@@ -10,7 +10,7 @@ import javax.swing.JFrame;
 import javax.swing.JTextArea;
 import javax.swing.SwingWorker;
 
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
 
 @SuppressWarnings("serial")
@@ -19,7 +19,7 @@ public class Get extends JFrame {
 	JButton jb;
 	JTextArea jta;
 
-	public Get(AtomicBroadcastBuffer<Message<String>> buffer, int id) {
+	public Get(ABB<Message<String>> buffer, int id) {
 		super("Get");
 		jb = new JButton("Get");
 		jta = new JTextArea();

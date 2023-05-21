@@ -1,6 +1,6 @@
 package rs.ac.bg.etf.kdp.sanja.viseelementniBafer;
 
-public interface AtomicBroadcastBuffer<T> {
+public interface ABB<T> {
 
 	public void put(T item);
 	

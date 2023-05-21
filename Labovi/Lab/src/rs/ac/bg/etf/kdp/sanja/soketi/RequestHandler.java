@@ -5,15 +5,15 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 
-import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.AtomicBroadcastBuffer;
+import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.ABB;
 import rs.ac.bg.etf.kdp.sanja.viseelementniBafer.Message;
 
 public class RequestHandler extends Thread {
 
 	private Socket clientSocket;
-	private AtomicBroadcastBuffer<Message<String>> buffer;
+	private ABB<Message<String>> buffer;
 
-	public RequestHandler(Socket clientSocket, AtomicBroadcastBuffer<Message<String>> buffer) {
+	public RequestHandler(Socket clientSocket, ABB<Message<String>> buffer) {
 		this.clientSocket = clientSocket;
 		this.buffer = buffer;
 	}
