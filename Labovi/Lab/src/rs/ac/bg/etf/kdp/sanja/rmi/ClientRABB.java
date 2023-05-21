@@ -32,17 +32,24 @@ public class ClientRABB<T> implements ABB<T> {
 		
 	}
 
+	// Metode put i get se zavrsavaju kada se zavrse metode stub.put i stub.get na serveru.
+	// Razmena poruka preko soketa se opet dogadja izmedju klijenta i servera, medjutim to sve radi RMI u pozadini sakriveno od nas - 
+	// mi to sve iniciramo jednostavnim pozivima stub.put ili stub.get metoda udaljenog objekta stub koji je na serveru.
+	
 	@Override
 	public void put(T item) {
+		
 		try {
 			stub.put(item);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		
 	}
 
 	@Override
 	public T get(int id) {
+		
 		T item = null;
 		
 		try {

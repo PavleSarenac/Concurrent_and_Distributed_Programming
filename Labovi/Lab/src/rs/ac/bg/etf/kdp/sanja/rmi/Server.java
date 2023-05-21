@@ -33,10 +33,11 @@ public class Server {
 			// preko kog moze da mu se pristupi, pa da ne napravimo neku gresku kada ima vise udaljenih objekata - da budemo sigurni da svaki
 			// ima svoj port.
 			
-			// Za svaki zahtev za dohvatanjem ovog objekta ce RMI sistem u pozadini iskoristiti jednu nit iz svog pool-a spremnih niti
-			// u okviru koje ce se izvrsavati sve operacije koje klijent pozove nad nasim udaljenim objektom. Na taj nacin ce klijent
-			// imati privid kao da se sve to izvrsava na njegovom racunaru, a zapravo sve sto on radi se izvrsava u okviru jedne niti
-			// na potpuno drugom racunaru, tj. serveru.
+			// MNOGO VAZAN KOMENTAR ISPOD!!!
+			// Za svaki zahtev od klijenta za izvrsenjem neke metode ovog objekta ce RMI sistem u pozadini iskoristiti jednu nit iz svog 
+			// pool-a spremnih niti u okviru koje ce se ta metoda naseg udaljenog objekta izvrsiti. 
+			// Na taj nacin ce klijent imati privid kao da se ta metoda naseg udaljenog objekta izvrsava na njegovom racunaru, a zapravo
+			// ce se izvrsiti u okviru jedne niti na serveru i rezultat ce se vratiti klijentu.
 			RABB<Message<String>> stub = (RABB<Message<String>>) UnicastRemoteObject.exportObject(buffer, 0);
 			
 			// Na ovaj nacin omogucavamo da klijenti mogu preko porta 4001 da pristupe registru udaljenih referenci - server osluskuje
