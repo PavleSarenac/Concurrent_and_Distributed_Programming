@@ -55,6 +55,7 @@ public class NetAB implements AB {
 		}
 	}
 
+	// Ovu metodu Producer ne koristi, implementirana je radi vezbe.
 	@Override
 	public Goods getGoods(String name) {
 		GoodsImpl goods = null;

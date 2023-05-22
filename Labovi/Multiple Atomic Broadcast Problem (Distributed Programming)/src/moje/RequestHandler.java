@@ -10,9 +10,10 @@ public class RequestHandler extends Thread {
 	Socket clientSocket = null;
 	ObjectOutputStream outputStream = null;
 	ObjectInputStream inputStream = null;
-	AtomicBroadcast buffer = null;
+	IAtomicBroadcast buffer = null;
+	private int threadId = -1;
 
-	public RequestHandler(Socket clientSocket, AtomicBroadcast buffer) {
+	public RequestHandler(Socket clientSocket, IAtomicBroadcast buffer) {
 		this.clientSocket = clientSocket;
 		try {
 			outputStream = new ObjectOutputStream(clientSocket.getOutputStream());
@@ -42,8 +43,15 @@ public class RequestHandler extends Thread {
 					case "get":
 						String getName = (String) inputStream.readObject();
 						System.out.println("RequestHandler.java: Buffer type: " + getName + ".");
-						GoodsImpl getGoods = (GoodsImpl) buffer.getGoods(getName);
-						outputStream.writeObject(getGoods);
+						if (threadId == -1) {
+							threadId = buffer.generateThreadId();
+						}
+						if (threadId == -1) {
+							outputStream.writeObject(null);
+						} else {
+							GoodsImpl getGoods = (GoodsImpl) buffer.getGoods(getName, threadId);
+							outputStream.writeObject(getGoods);
+						}
 						inputStream.readObject();
 						break;
 					case "end":

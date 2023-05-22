@@ -1,26 +1,41 @@
 package moje;
 
+import java.rmi.RemoteException;
 import java.util.HashMap;
 
-public class AtomicBroadcast {
+public class AtomicBroadcast implements IAtomicBroadcast {
 	
 	private int bufferCapacity;
 	private int numOfConsumers;
 	private HashMap<String, GoodsBuffer> buffers;
+	private int lastConsumerId = 0;
 	
 	private class GoodsBuffer {
-		Goods buffer[];
+		GoodsImpl buffer[];
 		int writeIndex = 0;
+		int readIndex[];
+		int consumerCount[];
 		int size = 0;
 		
-		public void addToBuffer(Goods goods) {
+		public void addToBuffer(GoodsImpl goods) {
 			buffer[writeIndex] = goods;
 			writeIndex = (writeIndex + 1) % bufferCapacity;
 			size++;
 		}
 		
+		public GoodsImpl getFromBuffer(int threadId) {
+			GoodsImpl goods = buffer[readIndex[threadId]];
+			if (--consumerCount[readIndex[threadId]] == 0) {
+				size--;
+			}
+			readIndex[threadId] = (readIndex[threadId] + 1) % bufferCapacity;
+			return goods;
+		}
+		
 		public GoodsBuffer() {
-			buffer = new Goods[bufferCapacity];
+			buffer = new GoodsImpl[bufferCapacity];
+			readIndex = new int[numOfConsumers];
+			consumerCount = new int[bufferCapacity];
 		}
 	}
 
@@ -30,7 +45,7 @@ public class AtomicBroadcast {
 		buffers = new HashMap<>();
 	}
 	
-	public synchronized void putGoods(String name, Goods goods) {
+	public synchronized void putGoods(String name, GoodsImpl putGoods) throws RemoteException {
 		GoodsBuffer goodsBuffer;
 		if (buffers.get(name) == null) {
 			goodsBuffer = new GoodsBuffer();
@@ -47,12 +62,33 @@ public class AtomicBroadcast {
 			}
 		}
 		
-		goodsBuffer.addToBuffer(goods);
+		goodsBuffer.addToBuffer(putGoods);
 		notifyAll();
 	}
 	
-	public synchronized Goods getGoods(String name) {
-		return null;
+	public synchronized GoodsImpl getGoods(String name, int threadId) throws RemoteException {
+		GoodsBuffer goodsBuffer = buffers.get(name);
+		if (goodsBuffer == null) {
+			goodsBuffer = new GoodsBuffer();
+			buffers.put(name, goodsBuffer);
+		}
+		while (goodsBuffer.size == 0) {
+			try {
+				wait();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		GoodsImpl goods = goodsBuffer.getFromBuffer(threadId);
+		notifyAll();
+		return goods;
+	}
+
+	public synchronized int generateThreadId() throws RemoteException {
+		if (lastConsumerId == numOfConsumers) {
+			return -1;
+		}
+		return lastConsumerId++;
 	}
 	
 }

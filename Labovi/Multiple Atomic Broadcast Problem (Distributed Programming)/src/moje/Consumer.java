@@ -5,7 +5,7 @@ public class Consumer {
 	public static void main(String[] args) throws Exception {
 		String host = args[0];
 		int port = Integer.parseInt(args[1]);
-		AB ab = null; // TODO zameniti null stvaranjem konkretnog objekta, npr. new PCClass(...)
+		AB ab = new RMIAB(); // TODO zameniti null stvaranjem konkretnog objekta, npr. new PCClass(...)
 
 		if (!ab.init(host, port))
 			return;
@@ -14,6 +14,8 @@ public class Consumer {
 			String name = args[i];
 
 			Goods goods = ab.getGoods(name);
+			
+			System.out.println(name);
 
 			int size = goods.getNumLines();
 			for (int j = 0; j < size; j++) {

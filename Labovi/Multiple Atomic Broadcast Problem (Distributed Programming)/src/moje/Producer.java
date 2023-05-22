@@ -15,6 +15,8 @@ public class Producer {
 			String name = args[i];
 
 			Goods goods = new GoodsImpl(name); // TODO zameniti null stvaranjem konkretnog objekta, npr. new GoodsClass(name)
+			
+			System.out.println(name);
 
 			int size = (int) (Math.random() * 32);
 			for (int j = 0; j < size; j++) {
