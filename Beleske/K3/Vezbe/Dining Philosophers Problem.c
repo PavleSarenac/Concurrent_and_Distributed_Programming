@@ -131,7 +131,7 @@ void Fork(int id) {
         // koji je koristio ovu viljusku javio da je on vise ne koristi.
         mbx_get(message, forks[id], INF, status);  // tip ove poruke moze biti i startEating i endEating
         if (message.operation == "startEating") {
-            philosopherWaiting = message.senderId;
+            philosopherWaiting = message;
             // Cekamo da filozof koji je koristio ovu viljusku nju i vrati. 
             mbx_get(message, forks[id], INF, status);  // tip ove poruke je sigurno endEating
         }
