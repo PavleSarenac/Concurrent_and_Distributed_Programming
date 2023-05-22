@@ -116,7 +116,7 @@ void Fork(int id) {
         if (philosopherWaiting == NULL) {
             // U ovu granu ulazimo ako nema filozofa koji ceka ovu viljusku od kad je prosli filozof nju koristio.
             // Cekamo da neki filozof zatrazi viljusku.
-            mbx_get(message, getFork[id], INF, status);
+            mbx_get(message, forks[id], INF, status);
         } else {
             // U ovu granu ulazimo ako ima filozofa koji ceka ovu viljusku od kad je prosli filozof nju koristio, pa hocemo
             // njemu da je damo na koriscenje.
@@ -129,11 +129,11 @@ void Fork(int id) {
         // Ukoliko je message.operation == "startEating" ovde, to znaci da je neki filozof zatrazio ovu viljusku dok
         // nju koristi neki drugi filozof. Ukoliko je message.operation == "endEating", to samo znaci da je filozof
         // koji je koristio ovu viljusku javio da je on vise ne koristi.
-        mbx_get(message, returnFork[id], INF, status);  // tip ove poruke moze biti i startEating i endEating
+        mbx_get(message, forks[id], INF, status);  // tip ove poruke moze biti i startEating i endEating
         if (message.operation == "startEating") {
             philosopherWaiting = message.senderId;
             // Cekamo da filozof koji je koristio ovu viljusku nju i vrati. 
-            mbx_get(message, returnFork[id], INF, status);  // tip ove poruke je sigurno endEating
+            mbx_get(message, forks[id], INF, status);  // tip ove poruke je sigurno endEating
         }
     }
 }
