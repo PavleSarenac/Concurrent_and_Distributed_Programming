@@ -1,12 +1,11 @@
-package lab2;
+package nijeMoje;
 
-public class Producer {
+public class Consumer {
 
 	public static void main(String[] args) throws Exception {
 		String host = args[0];
 		int port = Integer.parseInt(args[1]);
-
-		AB ab = new NetAB();
+		AB ab = new RMIAB();
 
 		if (!ab.init(host, port))
 			return;
@@ -14,19 +13,13 @@ public class Producer {
 		for (int i = 2; i < args.length; i++) {
 			String name = args[i];
 
-			Goods goods = new GoodsImpl(name);
+			Goods goods = ab.getGoods(name);
 
-			int size = (int) (Math.random() * 32);
+			int size = goods.getNumLines();
 			for (int j = 0; j < size; j++) {
-				String data = "" + (Math.random() * 1234567) + "\n";
-				goods.printLine(data);
-				System.out.println(data);
+				System.out.println(goods.readLine());
 				Thread.sleep(1000 + (int) (Math.random() * 734));
 			}
-
-			goods.save(name);
-			ab.putGoods(name, goods);
-
 		}
 		ab.close();
 	}

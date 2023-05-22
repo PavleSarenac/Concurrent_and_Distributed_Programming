@@ -1,4 +1,4 @@
-package lab2;
+package nijeMoje;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -14,8 +14,8 @@ public class ServerThread extends Thread {
 
 	public ServerThread(Socket s, IAtomicBroadcast ab) throws IOException {
 		this.s = s;
-		ois = new ObjectInputStream(s.getInputStream());
 		oos = new ObjectOutputStream(s.getOutputStream());
+		ois = new ObjectInputStream(s.getInputStream());
 		this.ab = ab;
 	}
 

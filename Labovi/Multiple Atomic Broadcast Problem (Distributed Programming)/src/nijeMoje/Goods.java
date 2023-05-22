@@ -1,4 +1,4 @@
-package lab2;
+package nijeMoje;
 
 public interface Goods {
 	/**

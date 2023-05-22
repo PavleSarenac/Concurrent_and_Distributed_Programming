@@ -1,4 +1,4 @@
-package lab2;
+package nijeMoje;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

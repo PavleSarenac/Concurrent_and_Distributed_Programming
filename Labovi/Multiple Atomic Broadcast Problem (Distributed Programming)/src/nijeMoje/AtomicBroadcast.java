@@ -1,4 +1,4 @@
-package lab2;
+package nijeMoje;
 
 import java.rmi.RemoteException;
 import java.util.HashMap;
@@ -12,8 +12,8 @@ public class AtomicBroadcast implements IAtomicBroadcast {
 		GoodsImpl[] data;
 		int[] consumerIndex;
 		int[] consumerCount;
-		int producerIndex;
-		int size;
+		int producerIndex = 0;
+		int size = 0;
 
 		GoodsResource() {
 			data = new GoodsImpl[capacity];

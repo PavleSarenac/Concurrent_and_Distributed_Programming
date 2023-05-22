@@ -1,4 +1,4 @@
-package lab2;
+package nijeMoje;
 
 import java.io.IOException;
 import java.net.ServerSocket;
