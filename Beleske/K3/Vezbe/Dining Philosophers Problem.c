@@ -89,9 +89,9 @@ void Philosopher(int id) {
         // Filozof trazi viljuske.
         message.senderId = id;
         message.operation = "startEating";
-        mbx_put(message, getFork[firstFork]);
+        mbx_put(message, forks[firstFork]);
         mbx_get(responseMessage, philosophers[id], INF, status);
-        mbx_put(message, getFork[secondFork]);
+        mbx_put(message, forks[secondFork]);
         mbx_get(responseMessage, philosophers[id], INF, status);
 
         eat();
@@ -99,8 +99,8 @@ void Philosopher(int id) {
         // Filozof javlja da je gotov sa jelom.
         message.senderId = id;
         message.operation = "endEating";
-        mbx_put(message, returnFork[firstFork]);
-        mbx_put(message, returnFork[secondFork]);
+        mbx_put(message, forks[firstFork]);
+        mbx_put(message, forks[secondFork]);
     }
 }
 

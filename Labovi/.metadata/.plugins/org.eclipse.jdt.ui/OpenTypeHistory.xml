@@ -1,2 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<typeInfoHistroy/>
+<typeInfoHistroy>
+    <typeInfo handle="=Lab/C:\/Program Files\/Java\/jdk-11.0.13\/lib\/jrt-fs.jar`java.rmi=/module=/true=/=/javadoc_location=/https:\/\/docs.oracle.com\/en\/java\/javase\/11\/docs\/api\/=/&lt;java.rmi(Remote.class[Remote" modifiers="1537" timestamp="1643401366582"/>
+    <typeInfo handle="=Multiple Atomic Broadcast Problem \(Distributed Programming)/src&lt;moje{Goods.java[Goods" modifiers="513" timestamp="1684744335748"/>
+    <typeInfo handle="=Multiple Atomic Broadcast Problem \(Distributed Programming)/src&lt;moje{AB.java[AB" modifiers="513" timestamp="1684744329378"/>
+    <typeInfo handle="=Multiple Atomic Broadcast Problem \(Distributed Programming)/C:\/Program Files\/Java\/jdk-11.0.13\/lib\/jrt-fs.jar`java.base=/module=/true=/=/javadoc_location=/https:\/\/docs.oracle.com\/en\/java\/javase\/11\/docs\/api\/=/&lt;java.lang(Thread.class[Thread" modifiers="33" timestamp="1643401366582"/>
+</typeInfoHistroy>
