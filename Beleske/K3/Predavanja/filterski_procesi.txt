@@ -1,0 +1,116 @@
+- Filteri
+	* filter je proces koji ima:
+		- jedan ili vise ulaznih kanala ili
+		- jedan ili vise izlaznih kanala
+	* filter sluzi da podaci dodju do njega preko jednog ili vise ulaznih kanala, zatim filter moze te podatke da izbaci, prosledi ih dalje 
+	nepromenjene ili da ih nekako obradi pa onda tek prosledi dalje opet preko jednog ili vise izlaznih kanala
+	* primer filtera su tokovi (stream) i protok podataka (dataflow)
+	* filtere treba povezati tako da nam svi oni zajedno izvrsavaju neku operaciju od interesa
+		- npr. moze vise filtera zajedno da nam radi merge sort
+	
+- Filterski proces - mailbox
+	* mozemo ga nazvati agregator - on skuplja vise podataka koji dolaze, i kada se napuni njegov interni bafer gde smesta te podatke, onda se
+	oni prosledjuju nekom drugom procesu svi odjednom
+	
+const int MAXLINE = ...;  // kapacitet internog bafera	
+chan inputChannel(char);
+chan outputChannel(char[MAXLINE]);
+
+void char_to_line() {
+	char line[MAXLINE];
+	int i = 0;
+	while (true) {
+		receive input(line[i]);
+		while (line[i] != 'CR' && i < MAXLINE) {
+			i++;
+			receive input(line[i]);
+		}
+		line[i] = EOL;  // EOL - End Of Line
+		send output(line);
+		i = 0;
+	}
+}
+
+- Filteri - mreza sa sortiranje
+	* ulazni kanal prima n vrednosti koje treba da budu sortirane, a na izlazni kanal se salju sortirane vrednosti
+	* na 3 razlicita nacina mozemo da znamo koliko ima vrednosti koje treba sortirati:
+		1) n moze da bude poznato unapred kao neka konstanta (u compile time-u je znamo)
+		2) n moze da bude poslato kao prva vrednost u nizu
+		3) moze da se zna kad smo stigli do kraja primljenog niza tako sto proces koji salje niz postavi na kraju neku specijalnu vrednost (sentinel
+		value na osnovu koje znamo da smo dosli do kraja - npr. EOS - End Of Stream ili EOL - End Of Line)
+	* sortiranje na jednom racunaru je ono cime smo se do sada bavili i ono se obavlja u 3 koraka:
+		1) primi sve podatke koje treba sortirati
+		2) sortiraj primljene podatke
+		3) posalji nazad sortiran niz
+	* procese mozemo povezati na dva nacina:
+				1) u lanac (pipeline)
+				2) u mrezu za stapanje (ona ima veci broj cvorova na ulazu, a manji broj cvorova na izlazu - hijerarhijska struktura)
+	* od filtera mozemo napraviti mrezu za sortiranje i mrezu za stapanje
+		- mreza za sortiranje je mreza procesa koji se izvrsavaju u paraleli koji obavljaju delove sortiranja niza
+		- mreza za stapanje od dva ili vise sortiranih nizova formira jedan veci sortirani niz
+		
+* u algoritmima i strukturama podataka smo se uglavnom fokusirali da minimizujemo vreme obrade
+	- u distribuiranom programiranju moze se desiti da uopste vreme obrade ne bude kritican faktor, vec vreme komunikacije
+		* to je slucaj zato sto su operacije send i receive vrlo spore, cak mnogo sporije nego npr. operacije sa semaforima
+			- dakle treba minimizovati pozive ovih operacija
+		
+- Filterska mreza za sortiranje sa binarnim stablom
+	* posto je u pitanju binarno stablo, ovakav filter ima dva ulazna kanala
+	* ukoliko npr. zelimo da sortiramo niz neopadajuce, filter ce prosledjivati dalje na izlazni kanal manji element od dva koja su stigla na ulaznim
+	kanalima
+	* varijante:
+		- filter pamti sve elemente trajno koje je primio (nije mnogo pametno)
+		- filter pamti uvek samo jedan element od dva koja je primio, a jedan prosledjuje dalje
+		- filter pamti 2 ili vise elemenata koje je primio
+	* ova filterska mreza je pogodna kada je velicina niza n stepen broja 2
+		- tada se lako racuna koji proces treba kom elementu niza da pristupi
+	
+	* mi cemo raditi sa binarnim stablom od n-1 procesa koji treba da sortiraju niz duzine n
+		- ovo je ustvari filterska mreza za stapanje
+		- svaki proces ce da ima dva ulazna kanala i jedan izlazni
+		- u tom slucaju je nase stablo simetricno - svi cvorovi su identicni i imamo potpuno balansirano stablo
+			* to ne mora uvek da bude slucaj ukoliko je duzina niza manja od n
+		- na pocetku cemo imati n/2 procesa koji primaju na svoja dva ulazna kanala po dva elementa niza i nakon svakog od njih znak EOS da se 
+		naznaci kraj toka, a onda ti procesi treba da na svom izlaznom kanalu proslede niz od ova dva elementa u odgovarajucem poretku i na kraju
+		tog niza takodje da postave znak EOS za kraj toka
+		- treba paziti uvek da nam u komunikacionim kanalima ne ostane nekakvo djubre, tj. neke poslate poruke koje niko nije primio
+			* to moze da napravi problem jer onda kada neki proces zaista treba da primi neku poruku, ukoliko je ostalo neko djubre on moze da
+			naidje na znak EOS u njemu i da shvati da je to kraj poruke, a zapravo uopste nije primio tu novu poruku vec staru koja je neko djubre
+			
+	* ne moraju uvek svi cvorovi nase filterske mreze da budu isti
+			
+chan in1(int), in2(int), out(int);
+void merge() {
+	int v1, v2;
+	receive in1(v1);
+	receive in2(v2);
+	while (v1 != EOS && v2 != EOS) {
+		if (v1 < v2) {
+			send out(v1);
+			receive in1(v1);
+		} else {
+			send out(v2);
+			receive in2(v2);
+		}
+		if (v1 == EOS) {
+			while (v2 != EOS) {
+				send out(v2);
+				receive in2(v2);
+			}
+		}
+		if (v2 == EOS) {
+			while (v1 != EOS) {
+				send out(v1);
+				receive in1(v1);
+			}
+		}
+	}
+	send out(EOS);
+}
+
+- Staticko i dinamicko imenovanje
+	* kako u proslom primeru procesi mogu da pristupe svojim ulaznim kanalima (in1, in2) i izlaznom kanalu (out)?
+		1) proces moze sam da im pristupi na osnovu svog identifikatora (staticko imenovanje)
+			- svi kanali su globalan niz i identifikator svakog procesa se preslikava u identifikatore njegovih kanala
+		2) neko ih prosledi procesu (dinamicko imenovanje)
+			- svi kanali su globalni, ali neki glavni proces kreira kanale i prosledjuje ih odgovarajucim procesima pri njihovom kreiranju

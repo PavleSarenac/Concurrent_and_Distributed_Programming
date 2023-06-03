@@ -1,3 +1,60 @@
+- Klijent-server arhitektura
+	* kod ove arhitekture se veci broj procesa (klijenata) obraca jednom procesu (serveru) koji neprekidno obradjuje njihove zahteve i 
+	prosledjuje nazad odgovore
+	* ulazni kanal (request) servera je takav da moze da primi poruke od vise razlicitih procesa (klijenata)
+	* server odgovara klijentima preko svog izlaznog kanala (reply)
+	* ukoliko se koristi staticko imenovanje
+		- imamo fiksan broj kanala i klijenti moraju da salju svoj identifikator da bi server mogao da im odgovori
+	* ukoliko se koristi dinamicko imenovanje
+		- svaki klijent kreira proces sa privatnim reply kanalom na koji ce mu server slati odgovor
+	* mi cemo koristiti staticko imenovanje - klijent ce uvek morati da posalje svoj identifikator
+	* server mora da zna kome treba da odgovori
+		- to cemo u nasem slucaju resavati tako sto ce klijent morati da se predstavi serveru tako sto ce mu proslediti svoj identifikator kao deo
+		svoje poruke
+		- u programskom jeziku Java:
+			* ukoliko imamo dugozivecu konekciju izmedju klijenta i servera, pomocu porta i IP adrese sa obe strane ce se
+			tacno znati ko s kim komunicira (te podatke mozemo sami da dobijemo iz naseg komunikacionog kanala)
+			* ukoliko imamo kratkozivecu konekciju izmedju klijenta i servera, klijent mora da posalje serveru svoj identifikator
+			* server salje odgovor na isti kanal preko kog je dobio zahtev - dakle taj kanal ce biti request/reply kanal istovremeno
+			
+* komunikacioni kanali request i reply nisu deljene promenljive kao sto smo ranije navikli u konkurentnom programiranju, vec su napisani ovako
+globalno samo da bismo naznacili da svi barataju sa takvim kanalima i da bismo lakse ispratili kod, ali se uopste ne radi o istim kanalima u
+razlicitim delovima koda - npr. u funkciji server i client se barata sa kanalima request i reply ali uopste se ne radi o istim kanalima vec svaki
+proces ima svoj par ovih kanala
+	- zato ih cak ne moramo ni nazivati na isti nacin u razlicitim delovima koda, ali onda mora postojati neki glavni proces (konfiguracioni menadzer)
+	koji ce da dohvati na osnovu nekog identifikatora komunikacioni kanal koji je na odredjenom mestu u kodu potreban - tu bismo imali indirektno 
+	imenovanje jer bi taj nas naziv odredjenog kanala ustvari upucivao na kanal koji nam je dohvatio konfiguracioni menadzer
+		* u Javi na osnovu IP adrese i porta moze da se dohvati odgovarajuci komunikacioni kanal
+
+* mi smo ovde zapravo napravili server sa samo jednom operacijom
+	- server u jednom trenutku moze da obavlja samo jednu ovakvu operaciju
+		* zato je ovakva operacija ekvivalentna monitorskoj operaciji u konkurentnom programiranju
+	- ovako nas napravljen server predstavlja jedan aktivan monitor sa jednom operacijom
+
+chan request(int clientId, types of input values);
+chan reply[n] (types of results);
+
+void server() {
+	int clientId;
+	declaration of permanent variables;
+	initialization code;
+	while (true) {
+		receive request(clientId, input variables);
+		results = f(input variables, permanent variables);
+		send reply[clientId] (results); 
+	}
+}
+
+void client(int clientId) {
+	send request(clientId, value arguments);
+	receive reply[clientId] (result arguments);
+}
+
+* pretpostavka je da se svaka poslata poruka garantovano isporucuje (necemo uzimati u obzir mogucnost da poruka moze da se zagubi)
+* ako jedan klijent salje vise poruka u isti komunikacioni kanal (postansko sanduce), garantovano je da ce one stici u FIFO redosledu, medjutim 
+ako vise klijenata istovremeno salje poruke serveru preko istog komunikacionog kanala (postanskog sanduceta), nemamo pojma kako ce se 
+te poruke ucesljati i kojim redosledom ce se isporuciti serveru
+
 - Klijent-server arhitektura - aktivni monitori
 	* aktivni monitori predstavljaju simulaciju monitora iz konkurentnog programiranja koriscenjem serverskih procesa i tehnike razmene poruka
 	(message passing)

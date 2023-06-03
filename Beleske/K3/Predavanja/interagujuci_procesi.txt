@@ -1,7 +1,9 @@
 - Interagujuci procesi (Interacting Peers)
 	* interagujuci procesi nisu isto sto i filterski procesi
-		- filterski procesi po pravilu svi rade neku slicnu obradu i svi zajedno obavljaju jedan konkretan veci posao
+		- filterski procesi po pravilu svi rade neku slicnu obradu i tako filtriraju poruke svi na isti nacin - primaju poruku, menjaju je po potrebi
+		i prosledjuju je dalje ukoliko je to potrebno
 		- interagujuci procesi ne moraju raditi slicne obrade
+		- i filterski i interagujuci procesi treba da budu povezani tako da zajedno obavljaju neki zajednicki cilj
 	* komunikacioni obrasci
 		- centralizovani
 			* jedan proces komunicira sa svim ostalim procesima
@@ -10,6 +12,7 @@
 			* svaki proces komunicira sa svakim drugim procesom
 		- prsten
 			* svaki proces komunicira samo sa svojim susedima
+				- najcesca implementacija je takva da svaki proces moze da salje poruke samo jednom svom susedu, a od drugog da prima poruke
 			
 * kada resavamo bilo koji problem u distribuiranom programiranju, treba da saberemo koliko ima poslatih poruka, kao i koliko ima primljenih
 poruka - ako je razlika ta dva broja razlicita od nule, to znaci da ili imamo deadlock u sistemu ili imamo poruke koje nisu nigde primljene pa

@@ -1,0 +1,64 @@
+- Sinhrona razmena poruka (message passing)
+	* sinhrono slanje poruka je drugacije u odnosu na asinhrono slanje - asinhrono slanje poruke je neblokirajuca operacija, dakle onaj koji je poslao
+	poruku nastavlja svoje izvrsavanje odmah nakon slanja i uopste ne ceka da proces koji ceka tu poruku nju zaista i primi, dok je sinhrono slanje
+	blokirajuca operacija jer se proces koji je poslao poruku blokira sve dok mu proces prijemnik ne javi da je uspesno primio poruku
+		- synch_send chan(expr1, ..., exprn);
+			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
+			* pretpostavka je da je bafer u koji se smesta poruka ogranicenog kapaciteta
+	* sinhroni prijem poruka je isti kao i asinhroni prijem - u oba slucaja je to blokirajuca operacija i onaj koji prima poruku se blokira dok je ne primi
+		- receive var(var1, ..., varn);
+			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
+	
+	* prednosti ovog nacina komunikacije:
+		- moguce je odrediti maksimalnu velicinu komunikacionog kanala
+		- posiljalac uvek moze biti siguran da primalac zaista moze da primi njegovu poruku
+		- posiljalac je sinhronizovan sa primaocem:
+			* primalac uvek ima najvise jednu neobradjenu poruku u svom komunikacionom kanalu
+			* posiljalac uvek ima najvise jednu neposlatu poruku
+	* mane ovog nacina komunikacije:
+		- smanjenje konkurentnosti
+		- vrlo lako moze da se dodje do deadlock-a (mrtve blokade)
+		
+	* kod centralizovanog nacina komunikacije (u fajlu interagujuci_procesi.txt) ne bi doslo do deadlock-a kada bismo asinhrono slanje poruka
+	zamenili sinhronim slanjem
+	* kod simetricnog nacina komunikacije (u fajlu interagujuci_procesi.txt) bi doslo do deadlock-a kada bismo asinhrono slanje poruka zamenili
+	sinhronim slanjem
+	* kod prstenastog nacina komunikacije (u fajlu interagujuci_procesi.txt) ne bi doslo do deadlock-a kada bismo asinhrono slanje poruka
+	zamenili sinhronim slanjem
+	
+- Sinhroni server sa jednom operacijom
+	* radi isto kao i asinhroni server sa jednom operacijom - nece doci do deadlock-a ako se asinhrono slanje zameni sinhronim
+
+	chan request(int clientId, types of input values);
+	chan reply[n] (types of results);
+
+	void server() {
+		int clientId;
+		declaration of permanent variables;
+		initialization code;
+		while (true) {
+			receive request(clientId, input variables);
+			results = f(input variables, permanent variables);
+			synch_send reply[clientId] (results); 
+		}
+	}
+
+	void client(int clientId) {
+		synch_send request(clientId, value arguments);
+		receive reply[clientId] (result arguments);
+	}
+	
+- Primer deadlock-a (mrtve blokade) kod sinhrone razmene poruka
+	* dolazi do deadlock-a jer oba procesa prvo salju poruku pa tek onda primaju, a u pitanju je sinhrono slanje poruka
+	
+	chan in1(int), in2(int);
+	void process1() {
+		int value1 = 1, value2;
+		synch_send in2(value1);
+		receive in1(value2);
+	}
+	void process2() {
+		int value1, value2 = 2;
+		synch_send in1(value2);
+		receive in2(value1);
+	}
