@@ -1,0 +1,143 @@
+- Communicating Sequential Processes (CSP)
+	* ovo je programski model kod koga se programi sastoje od vise sekvencijalnih procesa koji medjusobno komuniciraju sinhronom point-to-point
+	razmenom poruka
+		* proces koji salje poruku se blokira dok je proces primalac ne primi
+		* proces koji prima poruku se blokira sve dok je ne primi
+	* ovaj programski model treba da nam omoguci da razresimo neke probleme koje smo imali kod sinhrone razmene poruka izmedju procesa
+	* ovo nije programski jezik, vec programski model koji treba da nam pomogne pri proveri da li postoji neki deadlock, livelock, nedostizan kod, ...
+	* komunikacija izmedju procesa ce se obavljati sinhronom point-to-point prazmenom poruka
+	* ovde imamo direktno imenovanje procesa (procesi koji salju poruke, kao i procesi koji primaju poruke moraju naznaciti kome salju/od koga
+	primaju)
+	* postoji alternativna komanda koja sluzi za sprecavanje deadlock-a (mrtve blokade)
+	* postoji i repetitivna alternativna komanda koja nam sluzi za istovremeno proveravanje veceg broja poruka (proverava se da li su stigle) 
+	* kao sto se u programskom jeziku C npr. blok koda ogradjuje sa { }, u CSP se blok koda ogradjuje sa [ ]
+	
+- Procesi i paralelizam
+	* deklaracija procesa
+		imeProcesa :: implementacijaProcesa
+	* iza naziva procesa mogu se nalaziti i zagrade u okviru kojih je navedena lista celobrojnih vrednosti (npr. proc(1), proc(1, 2) itd.)
+		- u tom slucaju i naziv procesa i lista predstavljaju jedinstveni identifikator, tj. ime procesa (imeProcesa)
+	* deklaracija paralelnih procesa
+		[proc1 :: impl1 || ... || procN :: implN]
+	* skraceni nacin za deklaraciju: [X(i: 1..n) :: proc]
+		[X(1)::proc(1) || ... || X(n) :: proc(n)]
+		
+- Komunikacija
+	* komunikacione primitive:
+		<process>!<message>
+			- slanje poruke <message> procesu <process>
+		<process>?<message>
+			- prijem poruke <message> od procesa <process>
+	* do prenosa poruke dolazi samo ako su:
+		- nazivi posiljaoca i primaoca upareni
+		- poruke u naredbi za slanje i primanje kompatibilne (npr. moraju da se poklapaju naziv poruke i broj i tip argumenata)
+	* <message> moze biti prost ili slozen izraz
+	
+- Zasticena (guarded) komunikacija
+	* kako spreciti cekanje na portovima dok postoje drugi procesi koji mogu da komuniciraju na drugim portovima
+	* ovo je prakticno kao uslovni prijem poruke
+	* B; C -> S;
+		- B je opcioni boolean uslov
+		- C je komunikacioni iskaz zasticen sa B
+		- S je lista iskaza
+	* ako je B == false, onda se nece cekati da pristigne poruka koja se ceka pomocu C, niti ce se izvrsiti S, vec ce se samo nastaviti dalje 
+	izvrsavanje programa
+	* ako je B == true, i poruka je pristigla (tj. izvrsavanje C ne izaziva blokiranje), onda ce se izvrsiti S
+	* ako je B == true, i poruka nije jos pristigla, onda cemo se blokirati u C sve dok poruka ne stigne i tek tada ce se onda izvrsiti S
+	
+- Kontrolne strukture
+	* alternativna komanda
+		[ 	
+			B1; C1 -> S1;
+			[] ...
+			[] Bn; Cn -> Sn;
+		]
+		- npr. S1 se izvrsava ukoliko je uslov B1 ispunjen i poruka koja se ceka u C1 zaista moze da stigne
+		- ako je vise uslova istovremeno ispunjeno, cekacemo na sve te poruke u isto vreme i koja god prva pristigne, u tu granu cemo uci, tj. to S
+		ce se izvrsiti
+		- ako neki proces zavrsi sa radom, svi uslovi u kojima se nalazi naredba prijema od datog procesa ne mogu biti zadovoljeni
+			* logicno, tada ne mozemo da primimo poruku od tih procesa koji se vise ne izvrsavaju
+	* mozemo imati i kontrolne strukture sledecih izgleda:
+		[ 	
+			B1; S1;
+			[] ...
+			[] Bn; Sn;
+		]
+		
+		[
+			C1 -> S1;
+			[] ...
+			[] Cn -> Sn;
+		]
+	* repetitivna alternativna komanda (iterativna komanda)
+		* [
+			B1; C1 -> S1;
+			[] ...
+			[] Bn; Cn -> Sn;
+		]
+		- izvrsava se kao neka for petlja dokle god postoji neka izvrsiva alternativa
+		- dokle god bilo koja od alternativa moze da se izvrsi, mi ostajemo u nasoj iterativnoj komandi
+			* neka alternativa moze da se izvrsi dokle god je bilo koji od uslova B1...Bn ispunjen, i ako je u tim slucajevima gde je uslov Bi ispunjen 
+			moguce da proces koji se ceka da nam posalje poruku zaista i posalje poruku - Ci, tj. prijem poruke je izvrsiv (to znaci da se taj proces 
+			nalazi u delu koda iz kog moze da posalje poruku, tj. taj proces se i dalje nije zavrsio)
+	* mozemo imati i iterativne komande sledecih izgleda (ovako mozemo pisati for i while petlje u CSP):
+		* [ 	
+			B1; S1;
+			[] ...
+			[] Bn; Sn;
+		]
+		
+		* [
+			C1 -> S1;
+			[] ...
+			[] Cn -> Sn;
+		]
+		
+- Readers/Writers problem u CSP
+	* resenje u kojem citaoci imaju prednost
+	
+	[R(i: 1..numberOfReaders)::reader || W(i: 1..numberOfWriters)::writer || RW::buffer]
+	buffer:: 
+	int rCnt = 0, wCnt = 0;
+	* [
+		wCnt == 0; R(i)?startRead() -> rCnt++;
+		[] R(i)?endRead() -> rCnt--;
+		[] wCnt == 0 and rCnt == 0; W(i)?startWrite() -> wCnt++;
+		[] W(i)?endWrite() -> wCnt--;
+	]
+	reader::
+		RW!startRead();
+		read();
+		RW!endRead();
+	writer::
+		RW!startWrite();
+		write();
+		RW!endWrite();
+		
+	* resenje koje je malo vise fer prema piscima
+		- ukoliko dodje neki pisac koji zeli da pise, onda se ceka da svi trenutni citaoci zavrse citanje i onda ce pisac dobiti dozvolu da pise (nece se
+		za to vreme prihvatati novi citaoci koji zele da citaju)
+	
+	[R(i: 1..numberOfReaders)::reader || W(i: 1..numberOfWriters)::writer || RW::buffer]
+	buffer:: 
+	int rCnt = 0;
+	* [
+		R(i)?startRead() -> rCnt++;
+		[] R(i)?endRead() -> rCnt--;
+		[] W(i)?startWrite() -> [
+			* [
+				rCnt > 0; R(j)?endRead() -> rCnt--;
+			];
+			W(i)!ok();
+			W(i)?endWrite();
+		]
+	]
+	reader::
+		RW!startRead();
+		read();
+		RW!endRead();
+	writer::
+		RW!startWrite();
+		RW?ok();
+		write();
+		RW!endWrite();
