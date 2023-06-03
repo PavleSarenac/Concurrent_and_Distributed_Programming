@@ -1,0 +1,174 @@
+- Interagujuci procesi (Interacting Peers)
+	* interagujuci procesi nisu isto sto i filterski procesi
+		- filterski procesi po pravilu svi rade neku slicnu obradu i svi zajedno obavljaju jedan konkretan veci posao
+		- interagujuci procesi ne moraju raditi slicne obrade
+	* komunikacioni obrasci
+		- centralizovani
+			* jedan proces komunicira sa svim ostalim procesima
+			* ovo moze da bude zapravo aktivni monitor, ali i ne mora
+		- simetricni
+			* svaki proces komunicira sa svakim drugim procesom
+		- prsten
+			* svaki proces komunicira samo sa svojim susedima
+			
+* kada resavamo bilo koji problem u distribuiranom programiranju, treba da saberemo koliko ima poslatih poruka, kao i koliko ima primljenih
+poruka - ako je razlika ta dva broja razlicita od nule, to znaci da ili imamo deadlock u sistemu ili imamo poruke koje nisu nigde primljene pa
+predstavljaju kao neko djubre zbog sistem moze prilikom neke naredne komunikacije da dospe u nekonzistentno stanje
+* uvek bi trebalo da bude isti broj poslatih i primljenih poruka
+	
+- Primer razmene vrednosti kod interagujucih procesa (Interacting Peers)
+	* posmatra se n procesa (P[0], ..., P[n-1], n > 1)
+	* svaki proces ima lokalnu vrednost v
+	* cilj je da svaki proces sazna najvecu i najmanju vrednost
+	
+	* centralizovano resenje
+		- svaki proces salje svoju vrednost jednom procesu koji ce naci max i min vrednost i poslati svima taj odgovor nazad
+			* neka je proces P[0] proces koordinator
+			* ostali procesi njemu salju poruku u kojoj ce biti njihova lokalna vrednost
+			* proces P[0] ce da nadje max i min i to ce poslati svim procesima kao odgovor
+			* svi procesi izvrsavaju razlicit kod
+		- broj poslatih poruka
+			* procesi P[1], ..., P[n-1] svi salju po jednu poruku centralnom procesu P[0]
+			* P[0] salje n-1 poruku svim ostalim procesima (svaka poruka sadrzi max i min vrednost koje je on izracunao)
+			* ukupan broj poslatih poruka: (n-1) + (n-1) = 2*(n-1)
+		- broj komunikacionih kanala
+			* imamo ovde n komunikacionih kanala (svaki proces ima po jedan)
+				- to ni ne mora tako da bude realizovano, nekada procesi mogu da imaju i vise od jednog komunikacionog kanala
+					* u tim slucajevima se definitivno ne radi o aktivnim monitorima
+		- koristicemo asinhronu komunikaciju
+		
+		typedef struct Result {
+			int min;
+			int max;
+		} Result;
+		
+		chan values(int);  // po ovom komunikacionom kanalu proces koordinator prima poruke od ostalih procesa
+		chan results[n-1] (Result);  // po ovim komunikacionim kanalima ostali procesi primaju poruke od procesa koordinatora
+		void ProcessCoordinator() {
+			int newValue, currentMin, currentMax;
+			Result result;
+			
+			// Racunanje min i max
+			for (int i = 0; i < n-1; i++) {
+				receive values(newValue);
+				if (i == 0) {
+					currentMin = currentMax = newValue;
+				} else {
+					if (newValue < currentMin) {
+						currentMin = newValue;
+					}
+					if (newValue > currentMax) {
+						currentMax = newValue;
+					}
+				}
+			}
+			result.min = currentMin;
+			result.max = currentMax;
+			// Slanje min i max vrednosti svim ostalim procesima
+			for (int i = 0; i < n-1; i++) {
+				send results[i] (result);
+			}
+		}
+		
+		void RegularProcess(int id) {
+			int value = ...;
+			Result result;
+			send values(value);
+			receive results[id] (result);
+		}
+		
+	* simetricno resenje
+		- svaki proces salje svoju vrednost svim drugim procesima i onda dobija odgovor od svih ostalih procesa i onda on lokalno izracuna
+		min i max
+			* ovde nemamo proces koordinator jer svi procesi izvrsavaju identican kod
+			* ovo resenje je sporije od proslog i poslato je mnogo vise poruka, ali bi moralo da bude primenjeno u slucaju da nam je topologija
+			mreze simetricna
+		- broj poslatih poruka
+			* svi procesi salju po n-1 poruku jer je salju svim ostalim procesima
+			* ukupan broj poslatih poruka: n*(n-1)
+		- broj komunikacionih kanala
+			* imamo ovde n komunikacionih kanala (svaki proces ima po jedan)
+			
+		chan values[n] (int);
+		void Process(int id) {
+			int value = ...;
+			int newValue;
+			int currentMin = currentMax = value;
+			// Saljemo svoju vrednost svim ostalim procesima
+			for (int i = 0; i < n; i++) {
+				if (i != id) {
+					send values[i] (value);
+				}
+			}
+			// Primamo vrednost od svih ostalih procesa i racunamo lokalno min i max
+			for (int i = 0; i < n; i++) {
+				if (i != id) {
+					receive values[i] (newValue);
+					if (newValue < currentMin) {
+						currentMin = newValue;
+					}
+					if (newValue > currentMax) {
+						currentMax = newValue;
+					}
+				}
+			}
+		}
+	
+	* prstenasto resenje
+		- svaki proces salje tekuci min i max, kao i posle finalni min i max
+			* svi procesi izvrsavaju skoro identican kod
+			* proces P[0] prvo treba da posalje, a zatim da primi poruku
+			* ostali procesi prvo treba da prime, a zatim da posalju poruku
+			* na taj nacin se izbegava deadlock, jer ako bi svi prvo cekali da prime poruku sistem bi bio u deadlocku
+		- broj poslatih poruka:
+			* procesi P[0], P[1], ..., P[n-3] svi salju po dve poruke (tekuci min i max, a onda i finalni min i max)
+			* procesi P[n-2] i P[n-1] salju po jednu poruku (to ce biti finalni min i max)
+			* ukupan broj poslatih poruka:
+				- 2 * (n - 1)
+		- broj komunikacionih kanala
+			* imamo ovde n komunikacionih kanala (svaki proces ima po jedan)
+			
+		typedef struct Result {
+			int min;
+			int max;
+		} Result;
+		
+		chan values[n] (Result);
+		void ProcessInitiator(int id = 0) {
+			int value = ...;
+			Result result;
+			result.min = value;
+			result.max = value;
+			
+			// Prvi cvor salje svom desnom susedu svoju vrednost kao min i max na pocetku 
+			send values[1] (result);
+			// Prvi cvor prima na kraju od poslednjeg cvora (svog levog suseda) finalni min i max nakon obrade u svim ostalim cvorovima
+			receive values[0] (result);
+			// Prvi cvor onda salje taj finalni min i max svom desnom susedu
+			send values[1] (result);
+		}
+		
+		void RegularProcess(int id) {
+			int value = ...;
+			Result result;
+			// Tekuci cvor prima trenutne min i max od svog levog suseda
+			receive values[id] (result);
+			if (value < result.min) {
+				result.min = value;
+			}
+			if (value > result.max) {
+				result.max = value;
+			}
+			// Tekuci cvor salje svom desnom susedu azurirane min i max
+			send values[(id + 1) % n] (result);
+			// Tekuci cvor prima finalni min i max od svog levog suseda (ukoliko je u pitanju poslednji cvor P[n-1], on ne treba da primi finalne min i
+			// max jer ih on vec ima i zapoceo je lanac njihovog prosledjivanja)
+			if (id != n - 1) {
+				receive values[id] (result);
+			}
+			// Tekuci cvor prosledjuje svom desnom susedu finalni min i max (ukoliko desni sused nije poslednji ili prvi cvor (P[n-1] ili P[0]), jer oni vec 
+			// u ovom trenutku imaju finalni min i max, pa nema potrebe da im se on ponovo salje)
+			if (id < n - 2) {
+				send values[id + 1] (result);
+			}
+		}
