@@ -1,0 +1,151 @@
+- Linda
+	* ovo nije programski jezik, vec biblioteka za razlicite programske jezike (mi cemo raditi u C-u)
+	* ova biblioteka nam omogucava da koristimo asinhronu komunikaciju
+	* takodje, ova biblioteka treba da nam omoguci da u distribuiranom programiranju koristimo nesto sto lici na deljene promenljive
+		- to ce biti moguce jer u lindi imamo prostor torki (tuple space) - deljenu asocijativnu memoriju etiketiranih zapisa (tagged data records)
+	* postoji 6 primitiva za pristup prostoru torki (tuple space)
+	* ovde se necemo baviti time kako da konfigurisemo taj deljeni prostor torki (tuple space) i kako da povezemo nase racunare u jedan klaster
+	kako bi videli svi taj isti prostor, vec cemo se baviti koriscenjem ove biblioteke radi obezbedjivanja sinhronizacije
+	* postoji jedinstveni deljeni komunikacioni kanal ka prostoru torki (tuple space)
+	* u deljenom prostoru torki se pamte distribuirane strukture podataka kojima procesi konkurentno pristupaju
+		- cak mogu i trajno da se pamte te strukture
+	* Linda funkcionise kao distribuirani deljeni kes
+		- kada nas racunar npr. upisuje neku torku u prostor torki, ona se verovatno prvo upise na nasem racunaru, pa onda kada trazimo neku torku
+		iz prostora torki prvo pretrazujemo nas racunar, pa ako je nema kod nas onda pretrazujemo ostale racunare iz klastera
+		
+- Primitive u biblioteci Linda
+	* OUT
+		- upisuje objekat u prostor torki
+		- lici na asinhronu (neblokirajucu) operaciju slanja poruke (send)
+	* IN
+		- preuzima specificirani objekat iz prostora torki
+		- lici na operaciju primanja poruke (receive) - proces koji je pozvao IN se blokira sve dok ne preuzme poruku iz
+		prostora torki
+	* RD
+		- ceka dok se specificirani objekat ne pojavi u prostoru torki, ali ne preuzima ga kad se pojavi, vec ga ostavlja u prostoru torki
+		- lici na operaciju primanja poruke (receive) - proces koji je pozvao RD se blokira sve dok se specificirana poruka ne pojavi u prostoru torki,
+		i kada se pojavi proces se odblokira (ne preuzima tu poruku kao sto to radi primitiva IN vec je ostavlja u prostoru torki)
+	* EVAL
+		- kreira nit na nekom racunaru iz klastera - ta nit ce naravno videti deljeni prostor torki i moci ce da radi sve operacije nad njim
+	* INP
+		- neblokirajuci IN - ako nema specificiranog objekta u prostoru torki, proces se ne blokira vec samo nastavlja izvrsavanje
+		- ako je objekat nadjen u prostoru torki, vraca true, a u suprotnom vraca false
+	* RDP
+		- neblokirajuci RD - ako nema specificiranog objekta u prostoru torki, proces se ne blokira vec samo nastavlja izvrsavanje
+		- ako je objekat nadjen u prostoru torki, vraca true, a u suprotnom vraca false
+		
+- Prostor torki (tuple space)
+	* primer torke: ("tag", vrednost1, ..., vrednostN)
+	* primer upisivanja objekta u prostor torki
+		OUT("tag", expr1, ..., exprN);
+	* primer preuzimanja objekta iz prostora torki (ukoliko postoji torka ciji se parametri poklapaju)
+		IN("tag", ?a:t, 55, ..., true, ?k:t);
+		- IN parametri se zovu sabloni (templates) - moraju da se upare tagovi, stvarni parametri, broj paramatara, kao i tip formalnih parametara
+		- "tag", 55, true su stvarni parametri i predstavljaju deo "naziva" torke
+			* u njih se ne upisuje nista iz dohvacene torke, vec oni sluze samo za uparivanje sa specificnom torkom
+				- logicno je da se ne upisuje nista jer ce u dohvacenoj torci ovi parametri imati identicne vrednosti
+		- ?a:t, ?k:t su formalni parametri i oznacavaju lokacije u koje ce se smestiti odgovarajuce vrednosti polja iz procitane torke
+			* za ove parametre je samo specificiran njihov tip
+			* u promenljive a i k tipa t ce se upisati odgovarajuce vrednosti iz torke iz prostora torki pri operaciji IN
+		- torke su uparene ako su im jednaki svi stvarni parametri
+		
+- Sinhronizacija na barijeri
+	* inicijalizacija vrednosti u prostoru torki (dovoljno je da samo jedan proces ovo uradi)
+		OUT("barrier", 0);
+	* svaki proces radi sledece:
+		IN("barrier", ?counter);  // nakon ove operacije torka barrier vise ne postoji u prostoru torki
+		OUT("barrier", counter + 1);  // nakon ove operacije opet postoji torka barrier u prostoru torki
+	* svih N procesa cekaju sve dok counter ne dostigne vrednost N
+		RD("barrier", N);  // N ima konkretnu vrednost; nakon ove operacije u prostoru torki ce i dalje postojati torka barrier
+		
+- Procesne torke
+	* EVAL("tag", expr1, ..., exprN);
+	* ova operacija uglavnom kreira nit
+		- medjutim ne mora samo to da radi, moze cak i da se specificira veci broj niti koje ce da odrade neki posao
+		- ako te niti imaju neku povratnu vrednost, ta vrednost ce ostati u prostoru torki
+		- ovo bismo potencijalno mogli da koristimo ako bismo zeleli da implementiramo repetitivnu alternativnu komandu iz CSP
+			* repetitivna alternativna komanda iz CSP se izvrsava dokle god je neka alternativa dostizna
+			* ovde se analogno EVAL moze izvrsavati dokle god ima neka od pokrenutih niti da nije zavrsila sa radom
+				- kada nit zavrsi sa radom ona moze u odgovarajuce polje torke da upise da je gotova, pa da tako znamo da se ona zavrsila
+	* teoretski je omoguceno paralelno izvrsavanje za sva polja torke
+		- u realnosti paralelno izvrsavanje je omoguceno samo za polja koja predstavljaju pozive funkcija
+	* postaje pasivna torka ako sva polja torke dobijaju finalnu vrednost izraza u EVAL
+	
+- Cobegin i slanje/prijem vrednosti
+	- izvrsavanje vise procesa u paraleli
+		* Pascal
+			Co [i = 1 to N]
+				a[i] = f(i);  // kreira se N razlicitih niti koje se izvrsavaju u paraleli
+		* C-Linda
+			for (int i = 1; i <= N; i++) {
+				EVAL("a", i, f(i));  // ovde ce se kreirati N razlicitih niti koje ce da rade odgovarajuca izracunavanja
+			}
+	- slanje na i prijem sa komunikacionog kanala
+		* slanje
+			OUT("channelName", expressions);
+		* prijem
+			IN("channelName", variables);
+			
+- Readers/Writers problem u C-Linda
+	* trivijalno resenje - resenje u kom u jednom trenutku moze da ili cita jedan citalac ili da pise jedan pisac
+		int numOfReaders = ..., numOfWriters = ...;
+		
+		void reader(int id) {
+			IN("database");
+			read();
+			OUT("database");
+		}
+		
+		void writer(int id) {
+			IN("database");
+			write();
+			OUT("database");
+		}
+		
+		void init() {
+			OUT("database");
+			for (int i = 0; i < numOfReaders; i++) {
+				EVAL(reader(i));
+			}
+			for (int i = 0; i < numOfWriters; i++) {
+				EVAL(writer(i));
+			}
+		}
+	
+	* malo bolje resenje - moze vise citalaca da cita istovremeno; ovo resenje daje prednost citaocima u odnosu na pisce
+		- simuliramo semafor pomocu torke "database" - IN i OUT nam funkcionisu kao wait i signal kod semafora
+		- simuliramo deljenu promenljivu pomocu torke "readCnt"
+		
+		int numOfReaders = ..., numOfWriters = ...;
+		
+		void reader(int id) {
+			int rCnt;
+			IN("readCnt", ?rCnt);  // dohvatamo iz prostora torki koliko ima trenutno citalaca koji citaju
+			if (rCnt == 0) {  // ako nema citalaca koji citaju trenutno, onda se sinhronizujemo sa piscima
+				IN("database");  // citalac dobija pristup resursu (database) i moze da cita
+			}
+			OUT("readCnt", rCnt + 1);
+			read();
+			IN("readCnt", ?rCnt);
+			if (rCnt == 1) {
+				OUT("database");
+			}
+			OUT("readCnt", rCnt - 1);
+		}
+		
+		void writer(int id) {
+			IN("database");
+			write();
+			OUT("database");
+		}
+		
+		void init() {
+			OUT("database");
+			OUT("readCnt", 0);
+			for (int i = 0; i < numOfReaders; i++) {
+				EVAL(reader(i));
+			}
+			for (int i = 0; i < numOfWriters; i++) {
+				EVAL(writer(i));
+			}
+		}
