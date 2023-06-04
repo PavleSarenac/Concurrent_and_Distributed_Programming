@@ -54,8 +54,10 @@
 			[] Bn, Cn -> Sn;
 		]
 		- npr. S1 se izvrsava ukoliko je uslov B1 ispunjen i poruka koja se ceka u C1 zaista moze da stigne
-		- ako je vise uslova istovremeno ispunjeno, cekacemo na sve te poruke u isto vreme i koja god prva pristigne, u tu granu cemo uci, tj. to S
+		- ako je vise uslova istovremeno ispunjeno, cekacemo na sve te poruke u isto vreme i koja god pristigne, u tu granu cemo uci, tj. to S
 		ce se izvrsiti
+			* nedeterministicki (nema pravila) se odredjuje u koju granu se ulazi ukoliko je vise uslova istovremeno ispunjeno i ukoliko je vise 
+			poruka istovremeno pristiglo
 		- ako neki proces zavrsi sa radom, svi uslovi u kojima se nalazi naredba prijema od datog procesa ne mogu biti zadovoljeni
 			* logicno, tada ne mozemo da primimo poruku od tih procesa koji se vise ne izvrsavaju
 	* mozemo imati i kontrolne strukture sledecih izgleda:

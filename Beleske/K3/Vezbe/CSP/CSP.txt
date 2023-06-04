@@ -1,6 +1,6 @@
 * deklaracija paralelnih procesa
 		[proc1 :: impl1 || ... || procN :: implN]
-* skraceni nacin za deklaraciju: [X(i: 1..n) :: proc]
+* skraceni nacin za deklaraciju: [X(i:1..n) :: proc]
     - kada imamo vise procesa sa istom implementacijom
     [X(1)::proc(1) || ... || X(n) :: proc(n)]
 
