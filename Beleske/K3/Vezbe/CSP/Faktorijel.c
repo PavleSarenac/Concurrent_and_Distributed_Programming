@@ -4,7 +4,7 @@
 // propagiraju nazad od procesa Factorial(LIMIT) do procesa Factiorial(0), da bi na kraju procesa Factorial(0) zaista i dobio
 // kao rezultat vrednost faktorijela od broja n.
 
-[Factorial(0)::userNode || (i:1..LIMIT)Factorial(i)::regularNode]
+[Factorial(0)::userNode || Factorial(i:1..LIMIT)::regularNode]
 
 // ova metoda je odgovorna za zapocinjanje lanca izracunavanja faktorijela
 userNode::

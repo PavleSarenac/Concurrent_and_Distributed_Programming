@@ -110,7 +110,7 @@ user::
 // podatak u skupu radi sledece: S(1)!has(n); ... ; [(i: 1..100)S(i)?b -> skip]
 // Zbog efikasnosti pretrage, skup treba da bude sortiran.
 
-[(i:1..100)S::set]
+[S(i:1..100)::set]
 
 set::
 [

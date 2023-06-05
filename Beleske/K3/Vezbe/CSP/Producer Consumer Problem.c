@@ -1,4 +1,4 @@
-[(i:1..N)Producer(i)::produce || (j:1..M)Consumer(j)::consume || Buffer::buffer]
+[Producer(i:1..N)::produce || Consumer(j:1..M)::consume || Buffer::buffer]
 
 produce::
 *[
@@ -20,7 +20,7 @@ buffer::
     int item;
 
     *[
-        size > 0, (j:1..M)Consumer(j)?get() -> [
+        size > 0, Consumer(j)?get() -> [
             Consumer(j)!buffer(readIndex);
             readIndex = (readIndex + 1) % B;
             size--;
@@ -28,7 +28,7 @@ buffer::
 
         []
 
-        size < B, (i:1..N)Producer(i)?put(item) -> [
+        size < B, Producer(i)?put(item) -> [
             buffer(writeIndex) = item;
             writeIndex = (writeIndex + 1) % B;
             size++;
