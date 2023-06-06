@@ -1,0 +1,74 @@
+* prednosti ovog algoritma:
+		- obezbedjen FIFO poredak pri pustanju procesa u kriticnu sekciju - posten (fair) algoritam
+		- ne moramo unapred znati broj procesa koji se sinhronizuju
+		- kada neki proces izadje iz kriticne sekcije, budi se SAMO ONAJ koji je sledeci na redu - ne 
+		bude se svi procesi kao kod Ticket i Bakery algoritama, a cak ni vise od jednog procesa kao kod 
+		Andersenovog algoritma
+* mane ovog algoritma:
+	- koristi se specijalna instrukcija procesora (Get and Set) koju ne moraju imati svi procesori
+
+* napomene:
+	- skip oznacava da tu zelimo da se na najbolji moguci nacin utrosi procesorsko vreme (dok se ceka
+	ispunjenje nekog uslova) i to moze znaciti vise stvari: uposleno cekanje, suspendovanje tekuceg 
+	procesa itd.
+
+- CLH algoritam - coarse-grain
+	* poenta ovog algoritma je da napravimo nesto sto odgovara ticket algoritmu, ali tako da ne moramo
+	da znamo koliko ima ukupno procesa
+	* ulancana lista je prakticno rasparcana po memoriji tako sto svaki proces zna svoj element liste -
+	prev (na njemu ceka) i naredni element liste - node (na njemu ceka neki drugi proces koji sledeci 
+	treba da udje u kriticnu sekciju)
+	
+	// na cvoru prev tekuci proces ceka za ulazak u kriticnu sekciju, dok ce na 
+	// cvoru newNode cekati naredni proces koji pokusa da udje u kriticnu sekciju
+	
+	typedef struct Node {
+		bool flag;
+		Node(bool f) {
+			flag = f;
+		}
+	} Node;
+	
+	Node tail = Node(true);
+	
+	void process(int id) {
+		Node prev, newNode;
+		while (true) {
+			newNode = Node(false);
+			<prev = tail; tail = newNode;>
+			<await(prev->flag == true);>
+			// critical section
+			newNode->flag = true;  // pustamo naredni proces po FIFO redosledu da udje u kriticnu sekciju
+			// noncritical section
+		}
+	}
+
+- Get and Set (GS) - specijalna instrukcija procesora koja vraca staru vrednost promenljive i postavlja
+novu (kao atomicnu operaciju)
+GS(var, new):
+	<int tmp = var; var = new; return tmp;>
+	
+- CLH algoritam - fine-grain
+	// na cvoru prev tekuci proces ceka za ulazak u kriticnu sekciju, dok ce na 
+	// cvoru newNode cekati naredni proces koji pokusa da udje u kriticnu sekciju
+	
+	typedef struct Node {
+		bool flag;
+		Node(bool f) {
+			flag = f;
+		}
+	} Node;
+
+	Node tail = Node(true);
+
+	void process(int id) {
+		Node prev, newNode;
+		while (true) {
+			newNode = Node(false);
+			prev = GS(tail, newNode);
+			while (prev->flag == false) skip();
+			// critical section
+			newNode->flag = true;  // pustamo naredni proces po FIFO redosledu da udje u kriticnu sekciju
+			// noncritical section
+		}
+	}

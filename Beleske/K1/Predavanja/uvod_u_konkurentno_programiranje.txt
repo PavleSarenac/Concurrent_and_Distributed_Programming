@@ -1,0 +1,132 @@
+* napomene:
+	- kriticna referenca je referenca na promenljivu koja se menja od strane drugog procesa
+	- kada neki programski segment ima At-Most-Once-Property, to znaci da se taj segment izvrsava kao da je atomicna operacija
+	iako zapravo taj kod nije atomican
+		* to znaci da bi isti ishod bio cak i kada bi se obezbedilo da taj kod zaista bude atomican pomocu nekih sinhronizacionih metoda
+
+	- dodela x = v ima At-Most-Once-Property u sledece dve situacije:
+		1) kada v sadrzi najvise jednu kriticnu referencu i x se ne cita od strane drugog procesa
+		2) kada v ne sadrzi nijednu kriticnu referencu i x se cita od strane drugog procesa
+		
+- primer programa koji ima At-Most-Once-Property:
+	* nakon izvrsenja ovog programa vazi ((x == 1 && y == 1) || (x == 2 && y == 1)) == true;
+	* isto ovo bi vazilo cak i da su obe operacije dodele ogradjene kao kriticne sekcije
+		- koji od dva uslova bi bio ispunjen zavisi samo od rasporedjivaca procesa
+	
+	int x = 0, y = 0;
+	co
+		x = y + 1; || y = y + 1;
+	oc
+	
+- primer programa koji nema At-Most-Once-Property:
+	* nakon izvrsenja ovog programa vazi ((x == 1 && y == 2) || (x == 2 && y == 1) || (x == 1 && y == 1)) == true;
+		- situacija (x == 1 && y == 1) se dogadja kada proces P1 procita y u trenutku y == 0, pa se onda prekine izvrsavanje P1 da bi proces P2
+		dobio procesor i onda P2 procita x dok je jos uvek x == 0 - sada je nevazno koji ce biti dalji redosled, ishod ce biti (x == 1 && y == 1), sto
+		nikada ne bi moglo da se dogodi da su ove dve operacije dodele ogradjene kao kriticne sekcije
+	* kada bi obe operacije bile ogradjene kao kriticne sekcije vazilo bi ((x == 1 && y == 2) || (x == 2 && y == 1)) == true;
+	* posto je ocigledno skup mogucih ishoda u nasem kodu veci od skupa mogucih ishoda u kodu gde su operacije atomicne, zakljucujemo
+	da nas kod ne ispunjava At-Most-Once-Property
+	
+	int x = 0, y = 0;
+	co
+		x = y + 1; || y = x + 1;
+	oc
+
+- Await iskaz
+	* ako nije ispunjen At-Most-Once-Property, neophodna je coarse-grained (krupnija) atomska akcija
+	* <await(B);> <==> while not (B) skip;
+		- ova dva su ekvivalentna ukoliko uslov B ima At-Most-Once-Property
+	* <await(B); S;>
+		- B specificira delay condition (uslov kasnjenja), na kom moze da se blokira proces sve dok ne postane B == true
+		- S je sekvenca iskaza za koje je garantovano da terminiraju (to je vazno jer mora u nekom trenutku da se oslobodi kriticna sekcija da bi
+		i drugi procesi mogli da joj pristupe)
+	
+- Medjusobno iskljucivanje
+	* skup susednih atomskih akcija koji treba da se izvrsi kao krupnija nedeljiva akcija se naziva
+	kriticna sekcija i za njeno izvrsavanje je potrebno obezbediti medjusobno iskljucivanje
+	* medjusobno iskljucivanje je neophodno obezbediti samo za deljene resurse (promenljive), posto
+	logicno samo njih koristi vise razlicitih procesa
+	* <S;> - bezuslovna atomska akcija
+	* <await(B); S;> - uslovna atomska akcija
+		
+- Proizvodjac/potrosac sinhronizacija (deljeni jednoelementni bafer za kopiranje niza)
+	* obezbedjeno da uvek prvo proizvodjac stavi element u bafer, pa tek onda da ga potrosac procita, i tako naizmenicno
+	
+const int N = ...;
+
+int buffer = NULL;
+int producerCnt = consumerCnt = 0;
+void producer() {
+    int arr[N];
+    while (true) {
+        <await(producerCnt == consumerCnt);>
+        buffer = arr[producerCnt++];
+    }
+}
+
+void consumer() {
+    int arrCopy[N];
+    while (true) {
+        <await(producerCnt == consumerCnt + 1);>
+        arrCopy[consumerCnt++] = buffer;
+    }
+}
+
+- Kriticna sekcija za dva procesa
+bool in1 = in2 = false;
+void process(int id = 1) {
+    while (true) {
+        <await(in2 == false); in1 = true;>
+        // critical section
+        in1 = false;
+        // noncritical section
+    }
+}
+
+void process(int id = 2) {
+    while (true) {
+        <await(in1 == false); in2 = true;>
+        // critical section
+        in2 = false;
+        // noncritical section
+    }
+}
+
+- Kriticna sekcija za vise procesa
+bool lock = false;
+void process(int id) {
+    while (true) {
+        <await(lock == false); lock = true;>
+        // critical section
+        lock = false;
+        // noncritical section
+    }
+}
+
+- Test and Set (TS)
+	* posebna instrukcija procesora koja vraca staru boolean vrednost promenljive, a zatim postavlja 
+	vrednost te promenljive na true (kao atomicnu operaciju)
+	* ne postoji ova instrukcija na svakom racunaru, ali se moze simulirati npr. sa swap instrukcijom ili
+	nekom drugom
+
+bool TS(bool lock) {
+	<bool initial = lock; lock = true; return initial;>
+}
+
+* svaki upis u deljenu promenljivu iziskuje sinhronizaciju kes memorija jezgara procesora - zato treba
+minimizovati upise u deljene promenljive za bolje performanse programa
+* takodje, mnogo upisa u deljenu promenljivu okupira magistralu i ne dozvoljava drugim procesima da izadju na magistralu
+* zato je dobro resenje ispod - znacajno je smanjen broj upisa u deljenu promenljivu lock
+
+bool lock = false;
+void process(int id) {
+	while (true) {
+		while (lock == true) skip;  /* spin dok je lock true, tj. dok je kriticna sekcija zauzeta */
+		while (TS(lock) == true) {  /* probaj prvi da uzmes lock, tj. da zauzmes kriticnu sekciju */
+			while (lock == true) skip;  /* spin ponovo ako nisi uspeo, tj. ako je neko drugi zauzeo kriticnu sekciju */
+		}
+		// critical section
+		lock = false;  /* exit */
+		// noncritical section
+	}
+}

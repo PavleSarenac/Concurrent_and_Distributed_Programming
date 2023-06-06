@@ -1,0 +1,109 @@
+* prednost ovog algoritma:
+	- ne zahteva nijednu posebnu instrukciju procesora
+* mane ovog algoritma:
+	- ne obezbedjuje FIFO poredak pustanja procesa u kriticnu sekciju - nije posten (fair) algoritam
+	- koriscenje velikog broja promenljivih
+	- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+	
+* napomene:
+	- skip oznacava da tu zelimo da se na najbolji moguci nacin utrosi procesorsko vreme (dok se ceka
+	ispunjenje nekog uslova) i to moze znaciti vise stvari: uposleno cekanje, suspendovanje tekuceg 
+	procesa itd.
+
+- Tie-Breaker (Petersonov) algoritam za 2 procesa - coarse-grain
+	* ideja ovog algoritma je da ne moramo da koristimo bilo kakvu posebnu instrukciju procesora za
+	sinhronizaciju procesa
+	* logika algoritma (za 2 procesa):
+		- ako jedan proces zeli da udje u kriticnu sekciju (in1 = true, last = 1) a drugi nije to najavio 
+		(in2 = false), onda ce prvi biti pusten
+		- ako je proces najavio da zeli da udje u kriticnu sekciju (in1 = true), i ako je drugi proces takodje
+		najavio ulazak (in2 = true) i uradio upis u promenljivu last (last = 2) pre prvog, prvi proces ce se 
+		zablokirati (overwrite-ovace vrednost last i upisati da je on poslednji --> last = 1) a drugi ce imati 
+		prednost i uci u kriticnu sekciju - u sustini u ovom slucaju (kada vazi in1 == true && in2 == true) ko god prvi
+		uradi upis u promenljivu last, taj proces ce dobiti pristup kriticnoj sekciji (zato je logican naziv algoritma - Tie-Breaker)
+		
+int in1 = in2 = false;
+int last = 1;
+
+void process(int id = 1) {
+    while (true) {
+        in1 = true;
+        last = 1;
+        <await(in2 == false || last == 2);>
+        // critical section
+        in1 = false;
+        // noncritical section
+    }
+}
+
+void process(int id = 2) {
+    while (true) {
+        in2 = true;
+        last = 2;
+        <await(in1 == false || last == 1);>
+        // critical section
+        in2 = false;
+        // noncritical section
+    }
+}
+
+- Tie-Breaker (Petersonov) algoritam za 2 procesa - fine-grain
+int in1 = in2 = false;
+int last = 1;
+
+void process(int id = 1) {
+    while (true) {
+        in1 = true;
+        last = 1;
+        while (in2 == true && last == 1) skip();
+        // critical section
+        in1 = false;
+        // noncritical section
+    }
+}
+
+void process(int id = 2) {
+    while (true) {
+        in2 = true;
+        last = 2;
+        while (in1 == true && last == 2) skip();
+        // critical section
+        in2 = false;
+        // noncritical section
+    }
+}
+
+- Tie-Breaker (Petersonov) algoritam za n procesa - fine-grain
+* logika je ista kao za dva procesa, samo sto ovde imamo n stanja i procesi napreduju kroz njih i pusta
+se, naravno, jedan proces u kriticnu sekciju
+* proces moze da napreduje u naredno stanje:
+	1) ako ne postoji nijedan proces koji je u istom ili visem stanju od tekuceg procesa
+	2) ako postoji proces u istom ili visem stanju od tekuceg procesa, ali tekuci proces nije poslednji dosao u tekuce stanje
+* u slucaju da bas n procesa zeli da udje u kriticnu sekciju, situacija je sledeca:
+	- u svakom od n-1 stanja ce ostati po jedan proces blokiran, a samo jedan proces ce proci u n-to 
+	stanje i taj proces ce uci u kriticnu sekciju; nakon sto izadje taj proces iz kriticne sekcije i postavi 
+	in[i] = 0, proces iz (n-1)-og stanja ce moci da predje u n-to stanje i udje u kriticnu sekciju itd.
+* ovaj algoritam naravno radi i za slucajeve kad je broj procesa koji treba da se sinhronizuju manji od 
+n, dakle radi za slucajeve gde je broj procesa u skupu [0, n]
+
+const int N = ...;  // broj procesa, pa samim tim i broj stanja koje cemo imati
+
+int in[N] = {-1};  // za svaki proces pamtimo broj stanja u kom se on trenutno nalazi
+int last[N] = {-1};  // za svako stanje pamtimo koji proces je poslednji dosao u njega
+
+void process(int id) {  // id = 0..N-1
+    while (true) {
+        for (int i = 0; i < N; i++) {
+            in[id] = i;
+            last[i] = id;
+            for (int j = 0; j < N; j++) {
+                if (j != id) {
+                    while (in[id] <= in[j] && last[in[id]] == id) skip();
+                }
+            }
+        }
+        // critical section
+        in[id] = -1;
+        // noncritical section
+    }
+}

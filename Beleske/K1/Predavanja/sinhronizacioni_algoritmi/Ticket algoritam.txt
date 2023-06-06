@@ -1,0 +1,52 @@
+* prednost ovog algoritma:
+	- obezbedjen FIFO redosled pustanja procesa u kriticnu sekciju - posten (fair) algoritam
+* mane ovog algoritma:
+	- koristi se specijalna instrukcija procesora Fetch and Add koju ne moraju imati svi procesori
+	- svi procesi proveravaju svoj number sa istom promenljivom next; to je lose jer uvek onda moraju
+	da se bude svi procesi nakon inkrementiranja next-a da bi se pustio samo jedan - veliki rezijski
+	troskovi (budjenje procesa)
+
+* napomene:
+	- skip oznacava da tu zelimo da se na najbolji moguci nacin utrosi procesorsko vreme (dok se ceka
+	ispunjenje nekog uslova) i to moze znaciti vise stvari: uposleno cekanje, suspendovanje tekuceg 
+	procesa itd.
+
+- Ticket algoritam - coarse-grain
+	* sustina ovog algoritma je da obezbedjuje FIFO redosled pustanja procesa u kriticnu sekciju
+	
+	int ticket = 0;
+	int next = 0;
+
+	void process(int id) { 
+		int myTicket;
+		while (true) {
+			<myTicket = ticket++;>
+			<await(myTicket == next);>
+			// critical section
+			next++;
+			// noncritical section
+		}
+	}
+
+- Fetch and Add - posebna instrukcija procesora koja inkrementira promenljivu sa konstantom, pri
+cemu vraca staru vrednost promenljive
+
+int FA(var, incr) {
+	<int tmp = var; var = var + incr; return tmp;>
+}
+
+- Ticket algoritam - fine-grain
+
+	int ticket = 0;
+	int next = 0;
+
+	void process(int id) {
+		int myTicket;
+		while (true) {
+			myTicket = FA(ticket, 1);
+			while (myTicket != next) skip();
+			// critical section
+			next++;
+			// noncritical section
+		}
+	}

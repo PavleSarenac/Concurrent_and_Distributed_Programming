@@ -1,0 +1,59 @@
+* prednosti ovog algoritma:
+	- obezbedjen FIFO poredak pri pustanju procesa u kriticnu sekciju - posten (fair) algoritam
+	- smanjen je broj procesa koji se bude kada neki proces izadje iz kriticne sekcije kako bi se
+	proverilo koji je sledeci na redu da udje u kriticnu sekciju
+* mane ovog algoritma: 
+	- zahteva poznavanje tacnog broja procesa koji se sinhronizuju
+	- iako je smanjen broj procesa koji se bude, opet se nece probuditi tacno jedan proces, vec skup
+	procesa koji osluskuju datu kes liniju na kojoj je promenjen element niza (niz flag se u procesoru
+	cuva tako sto se odredjeni blokovi tog niza cuvaju na odredjenim kes linijama)
+	- koristi se specijalna instrukcija procesora Fetch and Add koju ne moraju imati svi procesori
+
+* napomene:
+	- skip oznacava da tu zelimo da se na najbolji moguci nacin utrosi procesorsko vreme (dok se ceka
+	ispunjenje nekog uslova) i to moze znaciti vise stvari: uposleno cekanje, suspendovanje tekuceg 
+	procesa itd.
+
+- Andersenov algoritam - coarse-grain
+	* poenta ovog algoritma je da u odnosu na ticket algoritam smanji broj procesa koji se bude 
+	(jer su to ozbiljni rezijski troskovi) nakon sto neki proces izadje iz kriticne sekcije
+	* za razliku od ticket algoritma gde svaki proces dobije svoj broj i poredi ga sa vrednoscu
+	promenljive next, ovde svaki proces dobija svoje mesto u nizu na kome ceka i uvek proverava
+	to svoje dodeljeno mesto da li je postalo true, i ako jeste, ulazi u kriticnu sekciju
+	
+	const int N = ...;  // broj procesa
+
+	int slot = 0;  // promenljiva slot ima istu ulogu kao promenljiva ticket u Ticket algoritmu
+	bool flag[N] = {false};  // svaki proces ima svoju bool promenljivu koja mu govori da li moze da udje u kriticnu sekciju
+	flag[1] = true;
+
+	void process(int id) {  // id = 0..N-1
+		int mySlot;
+		while (true) {
+			<mySlot = (slot + 1) % N; slot++>
+			<await(flag[mySlot] == true);>
+			// critical section
+			flag[mySlot] = false;
+			flag[(mySlot + 1) % N] = true;
+			// noncritical section
+		}
+	}
+
+- Andersenov algoritam - fine-grain
+	const int N = ...;  // broj procesa
+
+	int slot = 0;  // promenljiva slot ima istu ulogu kao promenljiva ticket u Ticket algoritmu
+	int flag[N] = {false};  // svaki proces ima svoju bool promenljivu koja mu govori da li moze da udje u kriticnu sekciju
+	flag[1] = true;
+
+	void process(int id) {   // id = 0..N-1
+		int mySlot;
+		while (true) {
+			mySlot = (FA(slot, 1) + 1) % N;
+			while (flag[mySlot] == false) skip();
+			// critical section
+			flag[mySlot] = false;
+			flag[(mySlot + 1) % N] = true;
+			// noncritical section
+		}
+	}
