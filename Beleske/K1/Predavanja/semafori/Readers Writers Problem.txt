@@ -1,0 +1,197 @@
+- Readers Writers problem - resenje 1 (jednostavan kritican region - u jednom trenutku ili jedan citalac ili jedan pisac)
+	* ovo resenje radi, ali ima problem manjka konkurentnosti - nije moguce da vise citalaca istovremeno
+	pristupaju resursu
+	* treba da bude onemoguceno da se u resurs u isto vreme upisuje i da se on cita, ali ako se ne radi
+	upis u resurs, treba da se omoguci da moze vise citalaca da ga cita istovremeno
+	
+	Semaphore resource = Semaphore(1);
+
+	void reader(int id) {
+		while (true) {
+			resource.wait();
+			read();
+			resource.signal();
+		}
+	}
+
+	void writer(int id) {
+		while (true) {
+			resource.wait();
+			write();
+			resource.signal();
+		}
+	}
+
+- Readers/Writers problem - resenje 2 (moze vise citalaca da cita istovremeno, ali je moguce izgladnjivanje pisaca)
+	* samo prvi citalac se sinhronizuje sa piscima, ostali prolaze - omoguceno da vise citalaca cita
+	resurs istovremeno, tako da je poboljsana konkurentnost
+	* mana ovog resenja:
+		- moze doci do izgladnjivanja pisaca, jer kada prvi citalac zapocne citanje, citaoci imaju prednost
+		i moze neogranicen broj citalaca da cita resurs neograniceno dugo - dakle prednost imaju citaoci,
+		nije fer resenje
+		
+	// Vrlo je vazno da poziv mutex.signal() budu tamo gde jeste - da smo npr. stavili mutex.signal() iznad provere
+	// if (numOfReaders == 1), bilo bi moguce da iako se blokira prvi citalac jer neko pise, udju naredni citaoci, sto ne sme
+	// da se dogodi. Za drugi poziv mutex.signal() i nije toliko vazno da bude ispod if-a, moze i iznad.
+	int numOfReaders = 0;
+
+	Semaphore resource = Semaphore(1);
+	Semaphore mutex = Semaphore(1);
+
+	void reader(int id) {
+		while (true) {
+			mutex.wait();
+			numOfReaders++;
+			if (numOfReaders == 1) {
+				resource.wait();
+			}
+			mutex.signal();  
+			read();
+			mutex.wait();
+			numOfReaders--;
+			if (numOfReaders == 0) {
+				resource.signal();
+			}
+			mutex.signal();
+		}
+	}
+
+	void writer(int id) {
+		while (true) {
+			resource.wait();
+			write();
+			resource.signal();
+		}
+	}
+
+- Readers/Writers problem - resenje 3 (moze vise citalaca da cita istovremeno i reseno izgladnjivanje pisaca)
+	* resen problem izgladnjivanja pisaca pomocu semafora enter (uz pretpostavku da je ovo fer
+	semafor koji postuje FIFO redosled pustanja procesa) koji obezbedjuje da se ne zanemaruju
+	novi pisci koji dolaze kada ima vise citalaca koji citaju resurs istovremeno - dalje ce se pustati 
+	procesi FIFO redosledom nezavisno od toga da li je u pitanju citalac ili pisac
+		* ovo resenje ne radi ukoliko semafor enter ne postuje FIFO redosled vec nasumicno budi
+		blokirane procese
+		
+	int numOfReaders = 0;
+
+	Semaphore resource = Semaphore(1);
+	Semaphore mutex = Semaphore(1);
+	Semaphore entry = Semaphore(1);
+
+	void reader(int id) {
+		while (true) {
+			entry.wait();
+			mutex.wait();
+			numOfReaders++;
+			if (numOfReaders == 1) {
+				resource.wait();
+			}
+			mutex.signal();
+			entry.signal();
+			read();
+			mutex.wait();
+			numOfReaders--;
+			if (numOfReaders == 0) {
+				resource.signal();
+			}
+			mutex.signal();
+		}
+	}
+
+	void writer(int id) {
+		while (true) {
+			entry.wait();
+			resource.wait();
+			entry.signal();
+			write();
+			resource.signal();
+		}
+	}
+
+- Readers/Writers - resenje 4 (coarse-grain; moze vise citalaca istovremeno i nema izgladnjivanja pisaca)
+
+	int numOfReaders = numOfWriters = 0;
+	Queue queue;
+
+	void reader(int id) {
+		while (true) {
+			<await(numOfWriters == 0 && queue.size() == 0); numOfReaders++;>
+			read();
+			<numOfReaders--;>
+		}
+	}
+
+	void writer(int id) {
+		while (true) {
+			<await(numOfReaders == 0 && numOfWriters == 0 && queue.size() == 0); numOfWriters++;>
+			write();
+			<numOfWriters--;>
+		}
+	}
+
+- Readers/Writers - pomocu prosledjivanja stafete i raspodeljenih binarnih semafora
+	* dozvola za ulazak u kriticnu sekciju se dobija preko bilo kog semafora koji sacinjava raspodeljeni
+	binarni semafor, a stafeta se predaje dalje pomocu SIGNAL koda
+	* ovo je univerzalna tehnika koja moze da se primeni na svaki sinhronizacioni problem
+	* tehnika prosledjivanja stafete je dosta brza jer jedan proces maksimalno ceka na 2 semafora (
+	citaoci na semaforima mutex i read, a pisci na semaforima mutex i write)
+	* u redu queue se cuvaju u FIFO redosledu samo informacije o tome u kom redosledu su bili blokirani
+	citaoci i pisci (ona izgleda npr. ovako ["reader", "reader", "writer", "reader", "writer"]) - to znaci da cemo u kodu za SIGNAL
+	u "pravednom" redosledu buditi tipove procesa, medjutim nemamo pojma kog tacno citaoca ili pisca
+	cemo probuditi posto nije garantovano da su semafori read i write na kojima se blokiraju citaoci i pisci
+	posteni (tj. da obezbedjuju FIFO redosled) - ovaj problem resavaju privatni semafori jer kod njih
+	svaki proces ceka na svom privatnom semaforu, pa je onda garantovano da ce on biti probudjen cak
+	iako je taj privatni semafor neposten
+	
+	int numOfReaders = numOfWriters = 0;
+	Queue queue;
+
+	Semaphore mutex = Semaphore(1);
+	Semaphore read = Semaphore(0);
+	Semaphore write = Semaphore(0);
+
+	void reader(int id) {
+		while (true) {
+			mutex.wait();
+			if (numOfWriters > 0 || queue.size() > 0) {
+				queue.insert("reader");
+				mutex.signal();
+				read.wait();
+			}
+			numOfReaders++;
+			SIGNAL();
+			read();
+			mutex.wait();
+			numOfReaders--;
+			SIGNAL();
+		}
+	}
+
+	void writer(int id) {
+		while (true) {
+			mutex.wait();
+			if (numOfReaders > 0 || numOfWriters > 0 || queue.size() > 0) {
+				queue.insert("writer");
+				mutex.signal();
+				write.wait();
+			}
+			numOfWriters++;
+			SIGNAL();
+			write();
+			mutex.wait();
+			numOfWriters--;
+			SIGNAL();
+		}
+	}
+
+	void SIGNAL() {
+		if (numOfWriters == 0 && queue.size() > 0 && queue.get(0) == "reader") {
+			queue.remove(0);
+			read.signal();
+		} else if (numOfReaders == 0 && numOfWriters == 0 && queue.size() > 0 && queue.get(0) == "writer") {
+			queue.remove(0);
+			write.signal();
+		} else {
+			mutex.signal();
+		}
+	}

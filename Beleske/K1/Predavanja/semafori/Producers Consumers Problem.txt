@@ -1,0 +1,99 @@
+- Producers and consumers (N proizvodjaca i N potrosaca) - raspodeljeni binarni semafori
+	* dobro resenje u slucaju kada se nesto retko proizvodi, a cim se proizvede se potrosi - nema mnogo
+	semafora, jednostavna sinhronizacija
+	* nije dobro resenje u slucaju da se to sto se proizvodi ne potrosi odmah - ima onda mnogo cekanja
+	da se proizvod potrosi pre pravljenja novog - resenje za to je onda Bounded buffer jer u njega
+	mogu proizvodi da se taloze iako se ne trose odmah - bolja konkurentnost programa
+	
+	int data;
+	
+	Semaphore empty = Semaphore(1);
+	Semaphore full = Semaphore(0);
+
+	void producer(int id) {
+		while (true) {
+			empty.wait();
+			data = produce();
+			full.signal();
+		}
+	}
+
+	void consumer(int id) {
+		while (true) {
+			full.wait();
+			consume(data);
+			empty.signal();
+		}
+	}
+
+- Bounded buffer (1 proizvodjac i 1 potrosac)
+	* povecana konkurentnost uz pomoc bafera i inicijalizovanja semafora empty = n jer je tako
+	omoguceno da proizvodjac proizvodi dalje i stavlja u bafer iako prethodni proizvodi nisu potroseni
+	od strane potrosaca
+	
+	const int CAPACITY = ...;
+
+	int buffer[CAPACITY];
+	int readIndex = writeIndex = 0;
+
+	Semaphore empty = Semaphore(CAPACITY);
+	Semaphore full = Semaphore(0);
+
+	void producer() {
+		while (true) {
+			empty.wait();
+			buffer[writeIndex] = produce();
+			writeIndex = (writeIndex + 1) % CAPACITY;
+			full.signal();
+		}
+	}
+
+	void consumer() {
+		while (true) {
+			full.wait();
+			consume(buffer[readIndex]);
+			readIndex = (readIndex + 1) % CAPACITY;
+			empty.signal();
+		}
+	}
+
+- Bounded buffer (M proizvodjaca i N potrosaca)
+	* posto sad ima vise proizvodjaca i potrosaca, a dodele rear = (rear + 1) % n i front = (front + 1) % n
+	nisu atomicne, potrebno je obezbediti medjusobno iskljucenje pomocu mutex-a, pri cemu treba
+	koristiti jedan mutex za proizvodjace i jedan za potrosace jer ne smemo samo da dozvolimo da dva
+	proizvodjaca istovremeno upisuju u bafer ili da dva potrosaca istovremeno uzimaju iz bafera - u redu 
+	je ako proizvodjac stavlja u bafer istovremeno dok potrosac uzima iz bafera jer menjaju razlicite
+	promenljive (rear i front) i jer smo sigurni da ne moze da se dogodi da proizvodjac upisuje 
+	u neku lokaciju u baferu istovremeno dok potrosac uzima iz te iste lokacije - to je obezbedjeno
+	uslovnom sinhronizacijom pomocu semafora empty i full
+	
+	const int CAPACITY = ...;
+
+	int buffer[CAPACITY];
+	int writeIndex = readIndex = 0;
+
+	Semaphore empty = Semaphore(CAPACITY);
+	Semaphore full = Semaphore(0);
+	Semaphore mutexP = Semaphore(1), mutexC = Semaphore(1);
+
+	void producer(int id) {
+		while (true) {
+			empty.wait();
+			mutexP.wait();
+			buffer[writeIndex] = produce();
+			writeIndex = (writeIndex + 1) % CAPACITY;
+			mutexP.signal();
+			full.signal();
+		}
+	}
+
+	void consumer(int id) {
+		while (true) {
+			full.wait();
+			mutexC.wait();
+			consume(buffer[readIndex]);
+			readIndex = (readIndex + 1) % CAPACITY;
+			mutexC.signal();
+			empty.signal();
+		}
+	}

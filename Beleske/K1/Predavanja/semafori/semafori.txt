@@ -1,0 +1,240 @@
+- Problem kriticne sekcije
+	Semaphore mutex = Semaphore(1);
+	void process(int id) {
+		while (true) {
+			mutex.wait();
+			critical section;
+			mutex.signal();
+			noncritical section;
+		}
+	}
+
+- Mrtvo blokiranje (Deadlock)
+	* nastaje ako su zadovoljena sledeca 4 uslova:
+		1) Procesi imaju pravo ekskluzivnog pristupa resursima (Mutual exclusion)
+		2) Proces drzi resurs sve vreme dok ceka pristup drugom resursu (Wait and Hold)
+		3) Proces ne moze preuzeti resurs na koji ceka (No preemption)
+		4) Postoji zatvoren krug procesa koji cekaju jedan drugog - jedan proces ceka na ispunjenje
+		uslova koji obezbedjuje drugi proces, drugi proces ceka na ispunjenje uslova koji obezbedjuje
+		treci proces itd., a poslednji proces u tom nizu ceka na ispunjenje uslova koji obezbedjuje prvi
+		proces (Circular wait)
+	* dovoljno je otkloniti jedan od ova 4 uslova da bi se sprecio deadlock
+
+- Graph-Based Protocols
+	* Neka je R skup svih resursa i neka su ri i rj dva resursa iz datog skupa. Ukoliko se u dati skup
+	uvede relacija parcijalnog uredjenja (-->) kod koje je resurs ri pre resursa rj (ri-->rj) onda i svaki
+	proces koji pristupa resursima ri i rj mora da im pristupi tako sto ce prvo da pristupi resursu ri, pa
+	onda resursu rj
+	* Graf resursa formiran na ovaj nacin je usmereni aciklicni graf - garantovano nema deadlock-a
+	* Graf resursa bi trebalo formirati na takav nacin da vodi racuna o tome koji proces pristupa kojim
+	resursima
+
+- Prosledjivanje stafete
+	* opsta tehnika za implementaciju await iskaza uz pomoc semafora
+	* raspodeljeni semafori - najvise jedan moze da ima vrednost 1 u svakom trenutku, wait je uvek pracen sa signal
+	* jedan semafor (e) se koristi za ulazak u svaki atomski iskaz (<)
+	* svaki await(B) uslov je zamenjen semaforom i informacijom o blokiranom procesu (brojacem, listom, ...)
+	* SIGNAL - kod koji definise za koji semafor je signal (>)
+	
+	<await(B); S;>
+	<=>
+	wait(e);
+	if (not B) DELAY;
+	S;
+	SIGNAL;
+	
+	<S;>
+	<=>
+	wait(e);
+	S;
+	SIGNAL;
+
+- DELAY kod (moguc izgled)
+	* za svaki delay condition (uslov za zakasnjavanje, u primeru je to uslov B) postoji poseban semafor
+	* pored ovoga potrebno je da postoji informacija o zakasnjenjima (brojac zakasnjenih ili lista, ...)
+	
+	if (not B) {
+		dp = dp + 1;  /* tekuci proces belezi u ovom brojacu da je on zablokiran na ovom uslovu (B) */
+		signal(e);  /* omogucavamo npr. da neki novi proces dodje i pokusa da prodje uslov B */
+		wait(rs);  /* rs je semafor koji je napravljen specificno za uslov B */
+	}
+
+- SIGNAL kod (moguc izgled)
+	* bitan je redosled ispitivanja uslova i zavisi od toga koji uslovi su prioritetniji (oni ce se ranije ispitati)
+	* ovaj kod uvek pusta tacno jedan proces da nastavi dalje
+	
+	if (B') {  /* uslov B' pod kojim se proces deblokira sa semafora rs NE MORA da bude jednak uslovu B zbog kog se isti taj proces blokirao na semaforu rs */
+		dp = dp - 1;  /* azuriranje informacije u broju zablokiranih procesa na semaforu rs */
+		signal(rs);  /* deblokiranje jednog procesa sa semafora rs */
+	} else if (B1') {
+		dp1 = dp1 - 1;
+		signal(rs1);
+	} ...
+	else signal(e);  /* ako nijedan uslov nije zadovoljen, omogucavamo novom procesu da udje u atomski iskaz */
+	
+- Shortest Job Next Allocation (SJN)
+	* ovaj problem resavamo pomocu privatnih semafora (svakom procesu se dodeljuje po jedan semafor
+		na kom ce on cekati, pa zahvaljujuci tome mozemo da budimo tacno odredjen proces koji zelimo)
+	* proces koji je deklarisao da ce najkrace koristiti neki deljeni resurs ce ga prvi dobiti kada se 
+	taj resurs oslobodi
+	* ako su dva razlicita procesa najavila da ce koristiti deljeni resurs isto vreme, prednost ce imati
+	onaj sto se prvi najavio (FIFO redosled)
+	
+- Shortest Job Next Allocation (SJN) - coarse-grain
+	bool free = true;
+	
+	void request(int time, int id) {
+		<await(free == true); free = false;>
+	}
+	
+	void release() {
+		<free = true;>
+	}
+
+- Shortest Job Next Allocation (SJN) - fine-grain, ali bazicno
+	bool free = true;
+	
+	Semaphore entry = Semaphore(1);
+	
+	void request(int time, int id) {
+		entry.wait();
+		if (free == false) {
+			DELAY();
+		}
+		free = false;
+		SIGNAL();
+	}
+	
+	void release() {
+		entry.wait();
+		free = true;
+		SIGNAL();
+	}
+
+- Shortest Job Next Allocation (SJN) - fine-grain (sa privatnim semaforima)
+	* semafor entry i privatni semafori privateSemaphores[N] se svi zajedno ovde ponasaju kao jedan raspodeljeni binarni
+	semafor jer uvek u jednom trenutku moze najvise jedan od ovih semafora da ima vrednost 1
+	* obezbedjen FIFO redosled za procese sa istom vrednoscu najavljenog vremena koriscenja resursa
+	time, cak iako imamo nepostene semafore (to je zato sto svaki proces jedini ceka na svom semaforu
+	i garantovano je da ce se zaista on probuditi kada se pozove signal za taj semafor)
+	* iako su privatni semafori cesto dobro resenje za razne probleme, ne treba preterati sa njihovim
+	koriscenjem jer to onda moze biti veliko opterecenje za operativni sistem
+		- tamo gde je moguce, treba teziti smanjenju broja privatnih semafora
+		
+	const int N = ...;  // broj procesa
+
+	typedef struct ProcessInfo {
+		int time;
+		int id;
+		ProcessInfo(int t, int i) {
+			time = t;
+			id = i;
+		}
+	} ProcessInfo;
+
+	bool free = true;
+	PriorityQueue<ProcessInfo> priorityQueue;  // na pocetku ovog reda ce uvek biti proces sa najmanjom vrednoscu time
+
+	Semaphore entry = Semaphore(1);
+	Semaphore privateSemaphores[N] = {Semaphore(0)};
+
+	void request(int time, int id) {
+		ProcessInfo process = ProcessInfo(time, id);  // ovo nije deljena promenljiva, pa je u redu da ne bude zasticena semaforom
+		entry.wait();
+		if (free == false) {
+			priorityQueue.insert(process);
+			entry.signal();
+			privateSemaphores[id].wait();
+		}
+		free = false;
+		entry.signal();
+	}
+
+	void release() {
+		entry.wait();
+		free = true;
+		if (priorityQueue.size() > 0) {
+			int nextProcessId = priorityQueue.remove(0)->id;
+			privateSemaphores[nextProcessId].signal();
+		} else {
+			entry.signal();
+		}
+	}
+
+- Generalizacija alokacije (uz pomoc prosledjivanja stafete i privatnih semafora)
+	* u ovom problemu umesto jednog deljenog resursa postoji niz deljenih resursa koje procesi mogu
+	da koriste
+	* prednost imaju procesi koji najave koriscenje manjeg broja resursa (ukoliko su najavljena vremena
+	koriscenja ista)
+		- ovo moze dovesti do izgladnjivanja procesa koji su najavili koriscenje velikog broja resursa
+			* ova pojava se moze ublaziti dinamickom promenom prioriteta - sto duze neki proces ceka,
+			to ga vise prebacujemo ga pocetku liste blokiranih (Aging)
+	
+	const int N = ...;  // broj procesa
+	const int M = ...;  // ukupan broj resursa
+	
+	typedef struct ProcessInfo {
+		int time;
+		int numOfResources;
+		int id;
+		ProcessInfo(int t, int num, int i) {
+			time = t;
+			numOfResources = num;
+			id = i;
+		}
+	} ProcessInfo;
+	
+	int availableResources = M;  // na pocetku je slobodno svih M resursa
+	PriorityQueue<ProcessInfo> priorityQueue;  // rastuce uredjeni prioritetni red - sortiranje se vrsi prvo po time, pa po numOfResources
+	
+	Semaphore entry = Semaphore(1);
+	Semaphore privateSemaphores[N] = {Semaphore(0)};
+	
+	void request(int time, int numOfResources, int id) {
+		ProcessInfo process = ProcessInfo(time, numOfResources, id);
+		entry.wait();
+		if (numOfResources > availableResources) {
+			priorityQueue.insert(process);
+			entry.signal();
+			privateSemaphores[id].wait();
+		}
+		availableResources -= numOfResources;
+		entry.signal();
+	}
+	
+	void release(int numOfResources) {
+		entry.wait();
+		availableResources += numOfResources;
+		if (priorityQueue.size() > 0) {
+			int requestedResources = priorityQueue.get(0)->numOfResources;
+			if (requestedResources <= availableResources) {
+				privateSemaphores[priorityQueue.remove(0)->id].signal();
+			} else {
+				entry.signal();
+			}
+		} else {
+			entry.signal();
+		}
+	}
+
+- Jednokratna barijera sa semaforima (moze samo jednom da se iskoristi)
+	Semaphore arrive1 = Semaphore(0);
+	Semaphore arrive2 = Semaphore(0);
+	
+	void worker1() {
+		arrive1.signal();
+		arrive2.wait();
+	}
+
+	void worker2() {
+		arrive2.signal();
+		arrive1.wait();
+	}
+
+- Problemi sa semaforima
+	* koriscenje semafora je najkomplikovaniji nacin sinhronizacije
+	* semafori su najstariji vid sinhronizacije procesa
+	* wait i signal operacije treba da budu u parovima rastrkanim po kodu
+	* lako moze doci do deadlock-a usled neke greske
+	* lako moze doci do izgladnjivanja procesa
+	* za medjusobno iskljucivanje i uslovnu sinhronizaciju se koriste iste primitive
