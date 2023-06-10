@@ -1,0 +1,65 @@
+- Shortest Job Next Monitor
+	* prednost pri budjenju imaju procesi koji su najavili da ce koristiti resurs najkrace vreme
+	* ovo je zapravo binarni semafor realizovan preko monitora
+		- to je zato sto u ovom problemu imamo jedan resurs koji se dodeljuje procesima i na njega se upravo odnosi promenljiva
+		free koja onda ocigledno predstavlja semaforsku promenljivu jednog binarnog semafora
+		- binarni semafor je onaj cija semaforska promenljiva nije ceo broj, vec boolean vrednost
+	* metodom request se trazi ekskluzivno pravo pristupa deljenom resursu
+		- resurs procesi koriste negde izvan monitora, u delu koda koji ne sluzi za sinhronizaciju
+			* procesi nikako ne treba da obradjuju resurs unutar monitorskih metoda jer bi to pomesalo sinhronizacioni i sekvencijalni kod
+			i jos dodatno bi blokiralo potencijalno monitor na neograniceno dugo vreme i samim tim i ceo nas program
+		- uvek treba teziti eksplicitnom razdvajanju koda za sinhronizaciju (njega enkapsuliramo u monitor) i obicnog sekvencijalnog koda (njega
+		pisemo van monitorskih metoda)
+	* metodom release se proces odrice ekskluzivnog prava pristupa resursu 
+	* metode request i release lice na metode wait i signal kod semafora, medjutim ovde se dodatno metodi request prosledjuje kao parametar
+	najava procesa koliko vremena zeli da koristi dati resurs
+	* ovo resenje je primenjivo u programskim jezicima u kojima uslovna promenljiva ima prioritetni red u kojem sortira neopadajuce procese
+	prema najavljenom vremenu koriscenja resursa
+		- u Javi npr. ovo nije moguce jer bi tu turn.wait(time) imalo efekat da se proces blokira na time milisekundi sto je potpuno druga stvar
+		u odnosu na zeljeni efekat u ovom problemu
+		
+	* u slucaju da nemamo obezbedjen prioritetni red cekanja na uslovnoj promenljivoj turn, ovaj problem bismo mogli da resimo kod monitora
+	koji imaju disciplinu Signal and Continue koristeci notifyAll, tj. kada proces koji napusta monitor treba da pusti neki drugi proces u monitor,
+	on budi sve procese koji su blokirani na uslovnoj promenljivoj, ali ce se pustiti samo onaj koji je najavio najkrace vreme koriscenja resursa
+		- ovo je veoma neefikasno jer se uvek bude svi blokirani procesi na uslovnoj promenljivoj (to su veliki rezijski troskovi), a pusta se samo jedan
+		- ovo podseca na Ticket algoritam
+		
+		- ovo se takodje moze resiti i Andersenovim algoritmom (pod uslovom da znamo koliko tacno ukupno procesa ima, jer onda znamo kolika
+		duzina niza nam treba, tj. koliko uslovnih promenljivih tako da svaki proces ima svoju)
+			* koriscenjem niza gde se svaki element odnosi na po jednu uslovnu promenljivu (svaki proces ceka na svojoj uslovnoj promenljivoj) - na
+			taj nacin se smanjuju rezijski troskovi tako sto se ne bude uvek svi procesi, vec se budi samo onaj koji treba
+		- ukoliko ne znamo tacan broj procesa, Andersenov algoritam moze i da se aproksimira tako sto bismo alocirali niz odredjene duzine, pri
+		cemu bismo poslednji element niza koristili kao uslovnu promenljivu za sve procese nakon sto su ostali elementi niza svi iskorisceni - u tom
+		slucaju bismo onda imali vise procesa koji cekaju na istoj uslovnoj promenljivoj, pa bismo tu opet imali notifyAll, ali bi bili smanjeni rezijski
+		troskovi svakako zahvaljujuci ostatku niza u kom je svaka uslovna promenljiva dodeljena tacno jednom procesu
+		
+		- ovo se takodje moze resiti i CLH algoritmom, tako da svaki proces opet ima svoju uslovnu promenljivu, pri cemu ne moramo da unapred
+		znamo broj procesa jer se uslovne promenljive dinamicki prave
+			* potencijalni problem je to sto ne podrzavaju svi programski jezici dinamicko pravljenje uslovnih promenljivih (Java podrzava), vec
+			bi kod njih lista morala staticki da se unapred alocira
+				- u takvim jezicima bismo morali da aproksimiramo CLH algoritam na slican nacin kao sto smo aproksimirali Andersenov algoritam, tako
+				da poslednji element liste predstavlja uslovnu promenljivu na kojoj cekaju svi procesi koji nisu dobili svoju uslovnu promenljivu od ostatka
+				liste
+		
+		
+class ShortestJobNextMonitor {
+	bool free = true;
+	
+	cond turn;
+	
+	void request(int time) {
+		if (free == true) {
+			free = false;
+		} else {
+			turn.wait(time);
+		}
+	}
+	
+	void release() {
+		if (turn.empty() == true) {
+			free = true;
+		} else {
+			turn.signal();
+		}
+	}
+}

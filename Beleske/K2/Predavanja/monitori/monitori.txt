@@ -1,0 +1,348 @@
+- monitori
+	* monitor je objekat koji drugi procesi mogu da koriste za sinhronizaciju pozivajuci njegove metode
+	* zelimo da napravimo apstrakciju - sakrili smo potpuno podatke koji se odnose na sinhronizaciju (to ce biti privatni atributi monitora i 
+	njima ne mogu procesi da pristupaju)
+	* metode monitora implicitno garantuju medjusobno iskljucivanje
+	* uslovna sinhronizacija je kod monitora implementirana pomocu uslovnih promenljivih (u prve 4 verzije Jave je postojala samo jedna
+	uslovna promenljiva - this, ali je nadalje to izmenjeno tako da ih moze biti i vise)
+	
+- modularizacija
+	* u konkurentnom programiranju monitori su pasivni objekti - u njima se samo cuvaju podaci, ali oni nisu niti i nemaju svoj tok kontrole
+	* aktivni procesi pozivaju metode monitora - sva sinhronizacija je sakrivena u monitoru za programere aktivnih procesa, tako da ovi
+	programeri ne moraju nista da znaju o tome kako se obavlja sinhronizacija, vazno im je samo da je ona obezbedjena
+	* programeri monitora mogu da menjaju implementaciju monitora kako zele, sve dok ti monitori sve vreme obezbedjuju sinhronizaciju - 
+	ako je to slucaj, na programere aktivnih procesa nikako nece uticati ako je programer monitora promenio njegovu implementaciju
+	* monitori olaksavaju raspodelu odgovornosti medju programerima - jedni ce se baviti konkurentnoscu koda, a drugi funkcionalnoscu
+	
+- struktura monitora
+monitor monitorName {
+	deklaracija stalnih promenljivih  // zadrzavaju svoju vrednost kad izadjemo iz neke metode (njima ne moze aktivni proces da pristupi)
+	inicijalizacija  // konstruktor
+	procedure  // metode nad kojima cemo raditi sinhronizaciju (samo njima moze aktivni proces da pristupi)
+}
+
+- enkapsulacija
+	* pristup monitoru je moguc samo kroz pozive metoda monitora
+	* nije moguce referencirati privatne atribute monitora izvan njega
+	* stalne promenljive monitora su inicijalizovane pre poziva njegovih metoda
+	* programer monitora ne moze da zna redosled pozivanja monitorskih metoda - korisnik monitora moze da ga lose koristi - 
+	postoji predvidjen nacin koriscenja monitora
+	* monitorska invarijanta - nesto sto uvek mora da vazi za monitor
+	
+- medjusobno iskljucivanje
+	* kada neki aktivni proces udje u monitor, on ima ekskluzivno pravo koriscenja celog objekta monitora (svih njegovih metoda)
+	
+- uslovne promenljive
+	* monitori imaju uslovne promenljive, pri cemu svaka uslovna promenljiva ima red procesa koji su zablokirani na njoj
+	* cond cv;  // cv je uslovna promenljiva na kojoj se procesi blokiraju
+	* wait(cv);  // proces koji pozove metodu ovu metodu se BEZUSLOVNO blokira na uslovnoj promenljivoj cv i odrice se ekskluzivnog prava pristupa monitoru
+	* signal(cv);  // budi se proces koji je na pocetku reda cekanja na uslovnoj promenljivoj cv (ako je red blokiranih procesa prazan, nema efekta)
+	
+- signal discipline
+	* Signal and Continue (nonpreemptive)
+		- u Javi je ovo slucaj - kada neki proces pozove signal nad nekom uslovnom promenljivom unutar monitora, on zadrzava ekskluzivno pravo 
+		pristupa monitoru, a proces kojeg je probudio se prebacuje iz reda blokiranih na toj uslovnoj promenljivoj na red blokiranih na ulazu u
+		monitor (entry queue)
+		- posto moze da prodje dosta vremena izmedju trenutka kada je proces probudjen i prebacen u entry queue i trenutka kada on zapravo
+		udje u monitor, moguce je da se promenilo u medjuvremenu stanje monitora - zato probudjeni proces mora uslove unutar monitora da
+		proverava u while petlji umesto sa if naredbom (mada to i ne mora uvek tako da se radi, moze se iskoristiti i tehnika Passing the Condition)
+		- samo kod monitora sa disciplinom Signal and Continue postoji metoda notifyAll() jer se ona ne kosi sa logikom ove discipline koja kaze
+		da probudjeni proces ide u Entry Queue, tako da nema razloga da ne mogu da se probude i svi procesi na nekoj uslovnoj promenljivoj
+		jer ce oni svakako ici u Entry Queue i nije garantovan redosled ulaska u monitor nikome
+		- kod ovakvih monitora ima 5 karakteristicnih situacija:
+			1) ulazak u monitor
+			2) cekanje na uslovnoj promenljivoj
+			3) budjenje jednog procesa na uslovnoj promenljivoj
+			4) budjenje svih procesa na uslovnoj promenljivoj
+			5) izlazak iz monitora
+		
+	* Signal and Wait (preemptive)
+		- kada neki proces pozove signal nad nekom uslovnom promenljivom unutar monitora, on prepusta ekskluzivno pravo pristupa monitoru
+		probudjenom procesu, a on odlazi u red blokiranih na ulazu u monitor (entry queue)
+		- proces koji je pozvao signal treba da proverava uslove u monitoru u while petlji umesto sa if naredbom (isto obrazlozenje kao za
+		probudjeni proces kod Signal and Continue)
+		- kod monitora sa disciplinom Signal and Wait ne postoji metoda notifyAll(), jer se kosi sa logikom ove discipline koja kaze da se odmah
+		prepusta ekskluzivno pravo pristupa konkretnom probudjenom procesu, pa nema potrebe za metodom notifyAll() jer se budi uvek jedan
+		proces
+		- kod ovakvih monitora imaju 4 karakteristicne situacije:
+			1) ulazak u monitor
+			2) cekanje na uslovnoj promenljivoj
+			3) budjenje jednog procesa na uslovnoj promenljivoj
+			4) izlazak iz monitora
+		
+	* Signal and Urgent Wait
+		- isto kao Signal and Wait, samo u ovom slucaju onaj proces koji je pozvao signal, pa napustio monitor, ulazi u monitor cim probudjeni proces
+		izadje iz monitora (garantovano je odmah sledeci, a kod Signal and Wait to nije slucaj)
+		- kod ovakvih monitora imaju 4 karakteristicne situacije:
+			1) ulazak u monitor
+			2) cekanje na uslovnoj promenljivoj
+			3) budjenje jednog procesa na uslovnoj promenljivoj
+			4) izlazak iz monitora
+		
+- dijagram stanja za monitore
+	* stanja:
+		1) entry queue (red cekanja na ulazu u monitor)
+		2) executing the monitor (unutrasnjost monitora)
+		3) condition variable queues (redovi cekanja na uslovnim promenljivim unutar monitora)
+	* prelazi izmedju stanja:
+		(1) ---> (2)
+			- ukoliko je monitor slobodan, proces moze da izadje iz entry queue i udje u monitor
+			- taj proces onda dobija ekskluzivno pravo pristupa monitoru
+			- ako se taj proces nigde ne blokira u monitoru, on ce odraditi sta ima i napustiti monitor
+		(2) ---> (3)
+			- ukoliko proces naidje u monitoru na poziv wait metode nad nekom uslovnom promenljivom, on bezuslovno napusta monitor i prebacuje
+			se u red blokiranih procesa na toj uslovnoj promenljivoj
+		(3) ---> (1)
+			- ukoliko neki proces pozove Signal and Continue nad uslovnom promenljivom, onda ce se probudjeni proces prebaciti iz reda cekanja
+			na uslovnoj promenljivoj na red cekanja na ulazu u monitor
+		(2) ---> (1), (3) ---> (2)
+			- ukoliko neki proces pozove Signal and Wait nad uslovnom promenljivom, onda ce probudjeni proces dobiti ekskluzivno pravo pristupa
+			monitoru, a proces koji je pozvao signal ce napustiti monitor i otici u red cekanja na ulazu u monitor
+	* nije garantovan FIFO redosled prilikom budjenja procesa sa redova cekanja (u programskom jeziku Java je tako)
+	
+- redovi u monitorima
+	* monitori odrzavaju dosta razlicitih redova cekanja:
+		- Entry Queue
+			* ovo je red cekanja na ulazu u monitor - sluzi da obezbedi medjusobno iskljucivanje za pristup monitoru
+		- CV (Condition Variable) Queues
+			* za svaku uslovnu promenljivu postoji po jedan red cekanja na kojem procesi cekaju na ispunjenje tog uslova
+		- Urgent Queue
+			* ako monitor ima Signal and Urgent Wait disciplinu, na ovom redu ce cekati procesi koji su pozvali signal pa napustili monitor i
+			oni imaju prioritet za ulazak u monitor u odnosu na procese koji cekaju na Entry Queue
+			
+- implementacija Signal and Continue monitora pomocu semafora
+
+	class SignalAndContinueMonitor {
+		int condQueueSize = 0;
+
+		Semaphore entryQueue = Semaphore(1);
+		Semaphore condQueue = Semaphore(0);
+
+		void monitorMethod() {
+			// (1) ulazak u monitor
+			entryQueue.wait();
+
+			// (2) cekanje na uslovnoj promenljivoj
+			entryQueue.signal();
+			condQueueSize++;
+			condQueue.wait();
+			entryQueue.wait();
+
+			// (3) budjenje jednog procesa na uslovnoj promenljivoj
+			if (condQueueSize > 0) {
+				condQueueSize--;
+				condQueue.signal();
+			}
+
+			// (4) budjenje svih procesa na uslovnoj promenljivoj
+			if (condQueueSize > 0) {
+				condQueueSize = 0;
+				for (int i = 0; i < condQueueSize; i++) {
+					condQueue.signal();
+				}
+			}
+
+			// (5) izlazak iz monitora
+			entryQueue.signal();
+		}
+	}			
+			
+- implementacija Signal and Wait monitora pomocu semafora
+	class SignalAndWaitMonitor {
+		int condQueueSize = 0;
+
+		Semaphore entryQueue = Semaphore(1);
+		Semaphore condQueue = Semaphore(0);
+
+		void monitorMethod() {
+			// (1) ulazak u monitor
+			entryQueue.wait();
+
+			// (2) cekanje na uslovnoj promenljivoj
+			entryQueue.signal();
+			condQueueSize++;
+			condQueue.wait();
+			condQueueSize--;
+
+			// (3) budjenje jednog procesa na uslovnoj promenljivoj
+			if (condQueueSize > 0) {
+				condQueue.signal();
+				entryQueue.wait();
+			}
+
+			// (4) izlazak iz monitora
+			entryQueue.signal();
+		}
+	}			
+			
+- implementacija Signal and Urgent Wait monitora pomocu semafora
+	* semafori entryQueue, urgentQueue i condVar predstavljaju jedan raspodeljeni binarni semafor (samo jedan od njih moze u jednom 
+	trenutku imati vrednost 1) i svi oni stite pristup monitoru
+	* koristimo tehniku predaje stafetne palice i raspodeljenog binarnog semafora da bismo implementirali monitor
+	* nedostatak ove implementacije je sto nismo omogucili da se iz jedne monitorske metode zovu druge monitorske metode
+
+	class UrgentWaitMonitor {
+		int urgentQueueSize = 0; 
+		int condQueueSize = 0;
+
+		Semaphore entryQueue = Semaphore(1);  
+		Semaphore urgentQueue = Semaphore(0); 
+		Semaphore condQueue = Semaphore(0); 
+
+		void monitorMethod() {
+			// (1) ulazak u monitor
+			entryQueue.wait();
+
+			// (2) cekanje na uslovnoj promenljivoj
+			if (urgentQueueSize > 0) {
+				urgentQueue.signal();
+			} else {
+				entryQueue.signal();
+			}
+			condQueueSize++;
+			condQueue.wait();
+			condQueueSize--;
+
+			// (3) budjenje jednog procesa na uslovnoj promenljivoj
+			if (condQueueSize > 0) {
+				condQueue.signal();
+				urgentQueueSize++;
+				urgentQueue.wait();
+				urgentQueueSize--;
+			}
+
+			// (4) izlazak iz monitora
+			if (urgentQueueSize > 0) {
+				urgentQueue.signal();
+			} else {
+				entryQueue.signal();
+			}
+		}
+	}
+		
+* ekskluzivno pravo pristupa monitoru se moze napustiti na dva nacina:
+		1) kada proces zavrsi izvrsavanje metode monitora
+		2) kada proces pozove metodu wait nad uslovnom promenljivom - bezuslovno se blokira na njoj
+* ne treba se oslanjati na to da je obezbedjen FIFO redosled na uslovnim promenljivama - cesto nije, pa ako nam treba mi moramo da ga
+obezbedimo
+		
+- Semafor napravljen preko Signal and Continue monitora
+	* u nekim programskim jezicima prvo su napravljeni monitori, pa se onda preko njih implementiraju semafori (npr. u Javi)
+	
+	* pretpostavka u ovom primeru je da monitor ima Signal and Continue disciplinu
+		- to znaci da proces koji se probudi na uslovnoj promenljivoj ide u entry queue, a onaj sto ga je probudio nastavlja da izvrsava
+		monitorsku metodu
+		- pretpostavka je da nije garantovan FIFO redosled ni na entry queue, a ni na uslovnoj promenljivoj cv, tako da uopste nije garantovano
+		da je ovaj semafor FIFO
+	* vrlo je vazno da se uslov s == 0 u metodi semWait proverava u while petlji a ne if strukturom
+		- to je slucaj zato sto moze da prodje dosta vremena izmedju trenutka kada je proces prvi put proverio uslov s == 0 i zablokirao se
+		na uslovnoj promenljivoj cv i trenutka kada proces zaista nastavi svoje izvrsavanje u monitorskoj metodi - moguce je da su u medjuvremenu
+		drugi procesi izvrsavali monitorske metode i menjali vrednost semaforske promenljive s, pa je treba proveravati u petlji za svaki slucaj
+		ako je potrebno da se probudjeni proces ipak ponovo zablokira
+		- moze da prodje dosta vremena zato sto se proces prvo blokira na uslovnoj promenljivoj cv, zatim kada se probudi on se prebaci u
+		entry queue i uopste nije poznato kada ce on zaista dobiti ponovo ekskluzivno pravo pristupa monitoru i nastaviti svoje izvrsavanje
+		monitorske metode tamo gde je stao
+		- kada ne bismo ovo radili, bilo bi moguce da promenljiva s dobije vrednost manju od nule, sto je nekonzistentno stanje i onda nam
+		vise ne bi funkcionisao ovako napravljen semafor
+		
+	* kada bi monitor iz primera imao Signal and Wait disciplinu, onda bi uslov s == 0 mogao da se proverava if strukturom umesto u while 
+	petlji zato sto kod ove discipline probudjeni proces odmah dobija ekskluzivno pravo pristupa monitoru, dok onaj sto ga je probudio ide u
+	entry queue (ovo vazi samo u slucaju da je garantovan FIFO na uslovnoj promenljivoj cv, u suprotnom bi isto morao u while petlji da se
+	proverava uslov s == 0)
+		- pretpostavka je da je garantovan FIFO redosled na uslovnoj promenljivoj cv (ovo uvek treba proveriti u konkretnom programskom 
+		jeziku)
+			* samo pod ovom pretpostavkom nije neophodna provera uslova s == 0 u petlji jer samo tada znamo zasigurno da niko nije mogao da 
+			umanji promenljivu s pre nas - to je zato sto smo nakon naseg blokiranja sigurno mi sledeci koji cemo je umanjiti
+		- tada smo onda sigurni da probudjeni proces sme da izvrsava monitorsku metodu jer nije mogla da se promeni semaforska promenljiva
+		od trenutka kada je on probudjen do trenutka kada on dobije ekskluzivno pravo pristupa monitoru (posto je proteklo vreme izmedju ta
+		dva trenutka jednako nuli)
+	
+	class SemaphoreMonitor {
+		int s = 0;
+		cond cv;
+
+		void semaphoreWait() {
+			while (s == 0) {  // kada bi bio Signal and Wait monitor i kada bi uslovna prom. cv garantovala FIFO, onda bi moglo if umesto while
+				cv.wait();  // monitorska metoda wait bezuslovno blokira proces na uslovnoj promenljivoj cv
+			}
+			s--;
+		}
+
+		void semaphoreSignal() {
+			s++;
+			if (cv.queue() == true) {
+				cv.signal();  // monitorska metoda signal budi jedan blokirani proces sa uslovne promenljive cv i stavlja ga u entry queue
+			}
+		}
+	}
+
+- Semafor napravljen preko Signal and Continue/Signal and Wait monitora - radi za oba tipa monitora (pomocu tehnike Passing the Condition)
+	* ovde nema provere uslova s == 0 u while petlji cak ni za disciplinu monitora Signal and Continue
+		- nema potrebe jer kad god da zaista oblokirani proces nastavi svoje izvrsavanje monitorske metode, on nece moci da dovede vrednost
+		promenljive s u nekonzistentno stanje (da dobije negativnu vrednost) jer se promenljiva s uopste ne modifikuje nakon budjenja procesa (ni
+		u metodi semSignal, ni u metodi semWait)
+	* ovo funkcionise za obe discipline monitora (Signal and Continue i Signal and Wait)
+	* kod ove tehnike proces p1 koji budi proces p2 proverava da li proces p2 moze da se probudi (proverava da li nije prazan red blokiranih
+	procesa na uslovnoj promenljivoj cv) i dodatno ako moze, proces p1 ce da uradi posao koji bi inace uradio proces p2 nakon budjenja (s--)
+		- medjutim, posto se u metodi semSignal do sad bezuslovno radilo s++, a sada prilikom budjenja nekog procesa bi se dodatno radilo i
+		s--, ocigledno je da je ovo isti efekat kao da nismo dirali promenljivu s, tako da u slucajevima kada red blokiranih procesa na prome-
+		nljivoj cv nije prazan, nema potrebe da menjamo promenljivu s, vec je samo dovoljno da se probudi jedan proces iz tog reda
+	* ova tehnika ne moze bas uvek da se primeni
+		- kod problema proizvodjaca i potrosaca (Producer and Consumer)
+			* tu ne moze proces koji ubacuje u bafer (proizvodjac) da odradi posao za onog koji treba to da preuzme iz bafera (potrosaca), jer 
+			potrosac mora to sto preuzme da vraca kao povratnu vrednost
+	* ako je uslovna promenljiva cv FIFO, onda je i semafor garantovano FIFO
+
+	class SemaphoreMonitor {
+		int s = 0;
+		cond cv;
+
+		void semaphoreWait() {
+			if (s == 0) {
+				cv.wait();
+			} else {
+				s--;
+			}
+		}
+
+		void semaphoreSignal() {
+			if (cv.queue() == true) {
+				cv.signal();
+			} else {
+				s++;
+			}
+		}
+	}
+
+* Metode koje cemo koristiti
+	- cv.wait()
+		* bezuslovno blokira tekuci proces na uslovnoj promenljivoj cv
+	- cv.signal()
+		* ukoliko ima blokiranih procesa na uslovnoj promenljivoj cv, odblokira jedan, a ako ih nema onda nema efekta
+	- cv.empty()
+		* proverava da li je red blokiranih procesa na uslovnoj promenljivoj cv prazan (vraca true ako jeste)
+	- cv.queue()
+		* proverava da li red blokiranih procesa na uslovnoj promenljivoj cv nije prazan (vraca true ako nije)
+	- cv.wait(rank)
+		* isto radi sto i cv.wait(), pri cemu dodatno i postavlja prioritet blokiranom procesu koji utice na to kad ce se on probuditi
+		* sto je manji rank, veci je prioritet
+		* ova metoda ne postoji u svim programskim jezicima (u Javi npr. nema, nego je u Javi drugi argument broj milisekundi koliko maksimalno
+		sme da bude blokiran proces)
+	- cv.signal_all()
+		* isto radi sto i cv.signal(), pri cemu budi sve blokirane procese ukoliko ih ima
+		* ova metoda ima smisla samo kod monitora sa disciplinom Signal and Continue
+			- nema smisla kod monitora sa disciplinom Signal and Wait jer kod njih budimo tacno jedan blokirani proces koji odmah dobija ekskluzivno 
+			pravo pristupa monitoru
+	- cv.minrank()
+		* dohvata prioritet procesa koji ima najveci prioritet od blokiranih procesa na uslovnoj promenljivoj cv
+
+- Tehnika Passing the Condition
+	* ova tehnika kod monitora je slicna tehnici prosledjivanja stafetne palice kod semafora
+	* kod ove tehnike proces koji je zakljucio da treba da probudi neki drugi proces odradi posao za njega i onda ga probudi
+	* ova tehnika nam je od interesa kod monitora koji imaju disciplinu Signal and Continue jer se tu probudjeni proces prebacuje iz reda 
+	blokiranih procesa na uslovnoj promenljivoj u entry queue nakon budjenja i zato nemamo pojma kada ce on uci zaista u monitor, pa je
+	dobro da, ukoliko je to moguce, proces koji ga je probudio odradi sav posao umesto njega koji utice na uslov pod kojim se taj proces 
+	probudio
+	
+* korisnika (programera sekvencijalnog koda) ne zanima kako je monitor implementiran, njemu je samo potrebno uputstvo kako se monitor 
+koristi da bi mogao da primeni sinhronizaciju na svoj kod - on ce samo pozivati metode monitora bez poznavanja njegove implementacije

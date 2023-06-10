@@ -4,30 +4,31 @@ pcele, i isto tako kada medved pojede hranu, on budi pcele a sebe blokira) i ras
 */
 
 const int N = ...;  // broj pcela
-const int H = ...;  // kapacitet kosnice (broj porcija koje mogu da stanu)
+const int H = ...; // broj porcija meda koji moze da stane u kosnicu
 
-int food = 0;  // trenutan broj porcija u kosnici
+int kosnica = 0;  // trenutan broj porcija meda u kosnici
 
-sem bear = 0;
-sem bee = 1;  // ova dva semafora predstavljaju raspodeljeni binarni semafor (samo jedan moze da ima vrednost 1 u jednom trenutku)
+Semaphore mutex = Semaphore(1);  // ova dva semafora predstavljaju raspodeljeni binarni semafor
+Semaphore bear = Semaphore(0);
 
-void bear() {
-	while (1) {
-		wait(bear);
-		eat();
-		food = 0;
-		signal(bee);
-	}
+void honeybee(int id) {  // id = 0..N-1
+    while (true) {
+        collectHoney();
+        mutex.wait();
+        kosnica++;
+        if (kosnica == H) {
+            bear.signal();
+        } else {
+            mutex.signal();
+        }
+    }
 }
 
-void bee() {
-	while (1) {
-		wait(bee);
-		food++;
-		if (food == H) {
-			signal(bear);
-		} else {
-			signal(bee);
-		}
-	}
+void bear() {
+    while (true) {
+        bear.wait();
+        eat();
+        kosnica = 0;
+        mutex.signal();
+    }
 }

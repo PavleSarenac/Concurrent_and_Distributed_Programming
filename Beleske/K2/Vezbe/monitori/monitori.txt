@@ -23,10 +23,11 @@ ima blokiranih procesa onda postoje tri razlicite discipline koje se postuju pri
         a on ide u entry queue.
     * Signal and Urgent Wait (SUW)
         - Onaj koji je pozvao signal prepusta ekskluzivno pravo pristupa monitoru probudjenom procesu, 
-        a on ide u urgent queue, i tako je on garantovano sledeci koji dobija pristup monitoru nakon
-        sto probudjeni proces zavrsi svoj posao u monitoru.
+        a on ide u urgent queue, koji je prioritetniji u odnosu na entry queue - kada god se bira koji proces
+        sledeci treba da udje u monitor, prvo se uzimaju procesi iz urgent queue sve dok se on ne isprazni, pa se tek
+        onda uzimaju procesi iz entry queue.
 - Ukoliko je cond.signal() poslednja instrukcija u metodi monitora, kod SW i SUW disciplina proces koji
-je pozvao signal nece ici u entry, tj. urgent queue jer je svoj posao u monitoru zavrsio.
+je pozvao signal nece ici u entry queue kod SW, a urgent queue kod SUW, jer je svoj posao u monitoru zavrsio.
 cond.signal();
 
 - Ova metoda vraca true ako je red cekanja na uslovnoj promenljivoj cond prazan.

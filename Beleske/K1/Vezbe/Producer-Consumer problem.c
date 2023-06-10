@@ -1,30 +1,35 @@
-const int BUFF_SIZE = ...;
+const int CAPACITY = ...;
 
-int buffer[BUFF_SIZE] = {};
-int front = 0, rear = 0;
+int buffer[CAPACITY];
+int writeIndex = readIndex = 0;
 
-sem mutexP = 1;
-sem mutexC = 1;
-sem empty = BUFF_SIZE;
-sem full = 0;
+Semaphore empty = Semaphore(CAPACITY);
+Semaphore full = Semaphore(0);
+Semaphore mutexP = Semaphore(1);
+Semaphore mutexC = Semaphore(1);
 
-void producer() {
-	while (1) {
-		int item = produce();
-		wait(empty);
-		wait(mutexP);
-		buffer[rear] = item; rear = (rear + 1) % BUFF_SIZE;
-		signal(mutexP);
-		signal(full);
-	}
+void producer(int id) {
+    int newItem;
+    while (true) {
+        newItem = produce();
+        empty.wait();
+        mutexP.wait();
+        buffer[writeIndex] = newItem;
+        writeIndex = (writeIndex + 1) % CAPACITY;
+        mutexP.signal();
+        full.signal();
+    }
 }
-void consumer() {
-	while (1) {
-		wait(full);
-		wait(mutexC);
-		int item = buffer[front]; front = (front + 1) % BUFF_SIZE;
-		signal(mutexC);
-		signal(empty);
-		consume(item);
-	}
+
+void consumer(int id) {
+    int newItem;
+    while (true) {
+        full.wait();
+        mutexC.wait();
+        newItem = buffer[readIndex];
+        readIndex = (readIndex + 1) % CAPACITY;
+        mutexC.signal();
+        empty.signal();
+        consume(newItem);
+    }
 }

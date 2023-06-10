@@ -5,32 +5,32 @@ kada kuvar napuni kazan budi ljudozdera a sebe blokira) i raspodeljene binarne s
 * raspodeljeni binarni semafori su oni za koje vazi da od svih njih u jednom trenutku maksimalno jedan semafor moze imati vrednost 1
 */
 
-const int M = ...;  // broj porcija koje mogu da stanu u kazan (>0)
+const int M = ...;  // broj porcija koji moze da stane u kazan
 
-int food = ...;  // trenutan broj porcija u kazanu (>=0)
+int pot = 0;  // trenutan broj porcija u kazanu
 
-sem mutex = 1;
-sem cook = 0;
-sem savage = 0;  // ova tri semafora predstavljaju jedan raspodeljeni binarni semafor
+Semaphore mutex = Semaphore(1);  // ova tri semafora predstavljaju raspodeljeni binarni semafor
+Semaphore semSavage = Semaphore(0);
+Semaphore semCook = Semaphore(0);
 
-void cook() {
-	while (1) {
-		wait(cook);
-		prepareFood();
-		food = M;
-		signal(savage);
-	}
+void savage(int id) {
+    while (true) {
+        mutex.wait();
+        if (pot == 0) {
+            semCook.signal();
+            semSavage.wait();
+        }
+        pot--;
+        mutex.signal();
+        eat();
+    }
 }
 
-void savage() {
-	while (1) {
-		wait(mutex);
-		if (food == 0) {
-			signal(cook);
-			wait(savage);
-		}
-		food--;
-		signal(mutex);
-		eat();
-	}
+void cook() {
+    while (true) {
+        semCook.wait();
+        prepareFood();
+        pot = M;
+        semSavage.signal();
+    }
 }

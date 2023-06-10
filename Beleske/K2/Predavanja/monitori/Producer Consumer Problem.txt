@@ -1,0 +1,44 @@
+- Bounded buffer - radi i za Signal and Continue i za Signal and Wait monitore
+	* da bi radilo i za disciplinu Signal and Continue, uslovi count == n i count == 0 moraju da se proveravaju u while petlji
+	* za Signal and Wait disciplinu bi mogao da stoji if umesto while
+	* ovo resenje radi i za Signal and Continue i za Signal and Wait disciplinu
+	* u ovom problemu nema smisla da primenimo tehniku prosledjivanja uslova (Passing the Condition)
+		- u ovoj tehnici proces koji budi druge procese vodi racuna o njima tako sto obavlja njihov posao umesto njih
+		- ovde to nema smisla jer je upravo poenta da potrosac radi svoj posao, dakle da uzima proizvode iz bafera i vraca 
+		ih kao povratnu vrednost, a proizvodjac treba da pravi proizvode i smesta ih u bafer
+
+	class BoundedBufferMonitor {
+		const int CAPACITY = ...;  // kapacitet bafera
+
+		int buffer[CAPACITY];
+		int writeIndex = readIndex = 0;
+		int bufferSize = 0;
+
+		cond empty;
+		cond full;
+
+		void produce(int newItem) {
+			while (bufferSize == CAPACITY) {
+				empty.wait();
+			}
+			buffer[writeIndex] = newItem;
+			writeIndex = (writeIndex + 1) % CAPACITY;
+			bufferSize++;
+			if (full.queue() == true) {
+				full.signal();
+			}
+		}
+
+		int consume() {
+			while (bufferSize == 0) {
+				full.wait();
+			}
+			int newItem = buffer[readIndex];
+			readIndex = (readIndex + 1) % CAPACITY;
+			bufferSize--;
+			if (empty.queue() == true) {
+				empty.signal();
+			}
+			return newItem;
+		}
+	}

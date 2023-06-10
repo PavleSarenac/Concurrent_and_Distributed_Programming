@@ -30,9 +30,8 @@ void agent() {
                     sibice = true;
                     break;
             }
+            await(next == true);
         }
-
-        await(next);
         next = false;
     }
 }

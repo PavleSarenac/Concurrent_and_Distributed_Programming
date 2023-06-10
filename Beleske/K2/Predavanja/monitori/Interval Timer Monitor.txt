@@ -1,0 +1,67 @@
+- Interval Timer Monitor
+	* u ovom problemu zelimo da realizujemo metodu sleep(interval) koja blokira proces na interval jedinica vremena
+	* vreme budjenja procesa se racuna kao wake_up_time = tod + interval, gde je tod trenutno vreme, a interval broj jedinica vremena
+	koliko proces treba da se uspava
+	* svaki proces onda ostaje zablokiran sve dok tod (tekuce vreme) ne postane vece od wake_up_time izracunatog za dati proces
+	* ovaj monitor ima dve metode:
+		- sleep(interval); // ovo je isto kao metoda sleep(interval) koju smo do sada uvek koristili na fakultetu
+		- tick();  // ova metoda se poziva kada istekne jedan kvant vremena i tada se azurira promenljiva tod koja pokazuje tekuce vreme
+		
+	* Prekrivanje uslova - Covering condition
+		- logika ove tehnike je da se bude svi procesi i onda svaki proces proverava da li treba opet da se zablokira ili moze da nastavi izvrsavanje
+		- kod ove tehnike je pretpostavka da imamo samo jednu uslovnu promenljivu na kojoj se svi procesi blokiraju
+		- mana ove tehnike je u tome sto se bude svi procesi, a samo jedan ce moci da nastavi da se izvrsava - veliki rezijski troskovi
+		- u prve 4 verzije Jave je postojala samo jedna uslovna promenljiva, ali je od pete verzije Jave uvedeno postojanje biblioteckih uslovnih 
+		promenljivih kojih moze da bude vise i time je olaksano konkurentno programiranje u Javi
+		- ova tehnika nije pozeljna za koriscenje zbog velikih rezijskih troskova
+		- ovo resenje moze da se unapredi tako sto svaki proces kada izracuna svoj wake_up_time njega umetne u listu koju odrzavamo neopadajuce, pa
+		bismo pozivali signal_all samo u slucaju kada je tod postao veci od prvog elementa te liste jer to znaci da postoji bar jedan proces koji zaista
+		treba da se budi - na ovaj nacin su malo ublazena nepotrebna budjenja tako sto sada makar budimo sve procese samo onda kada bar jedan
+		proces zaista i treba da se probudi
+		
+		monitor Timer {
+			int tod = 0;
+			cond check;
+			
+			void sleep(int interval) {
+				int wake_up_time = tod + interval;
+				while (wake_up_time > tod) {
+					check.wait();
+				}
+			}
+			
+			void tick() {
+				tod++;
+				check.signal_all();
+			}
+		}
+	
+	* Priority Wait Timer
+		- dosta smanjen broj procesa koji se budi jer se budi uvek onaj proces koji je sledeci na redu posto je red cekanja na uslovnoj promenljivoj
+		check realizovan kao prioritetni
+		- moze se dogoditi da vise razlicitih procesa imaju isti wake_up_time jer se wake_up_time racuna kao tod + interval, pa je moguce ako su se dva
+		dva procesa zablokirala u razlicitim trenucima i imaju razlicite vrednosti interval da se dogodi da su im zbirovi tod + interval isti
+			* u metodi tick procesi se bude u petlji - upravo zato sto moze da ih bude vise koji treba da se probude u istom trenutku
+		- skroz je u redu sto se u metodi sleep uslov wake_up_time > tod proverava sa if-om umesto u while petlji jer cim se probudio proces koji
+		je to bio zablokiran, mi smo sigurni da je ispunjen uslov wake_up_time <= tod jer se upravo pod tim uslovom proces i budi (to se proverava u 
+		metodi tick u uslovu while petlje)
+	
+		monitor Timer {
+			int tod = 0;
+			cond check;
+			
+			void sleep(int interval) {
+				int wake_up_time;
+				wake_up_time = tod + interval;
+				if (wake_up_time > tod) {
+					check.wait(wake_up_time);
+				}
+			}
+			
+			void tick() {
+				tod++;
+				while (check.queue() && check.minrank() <= tod) {
+					check.signal();
+				}
+			}
+		}

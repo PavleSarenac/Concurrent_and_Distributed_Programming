@@ -5,24 +5,29 @@
 	da se proizvod potrosi pre pravljenja novog - resenje za to je onda Bounded buffer jer u njega
 	mogu proizvodi da se taloze iako se ne trose odmah - bolja konkurentnost programa
 	
+	// radnje za koje ne znamo koliko traju (produce() i consume()) treba obaviti van kriticne sekcije
 	int data;
-	
+
 	Semaphore empty = Semaphore(1);
 	Semaphore full = Semaphore(0);
 
 	void producer(int id) {
+		int newItem;
 		while (true) {
+			newItem = produce();
 			empty.wait();
-			data = produce();
+			data = newItem;
 			full.signal();
 		}
 	}
 
 	void consumer(int id) {
+		int newItem;
 		while (true) {
 			full.wait();
-			consume(data);
+			newItem = data;
 			empty.signal();
+			consume(newItem);
 		}
 	}
 
@@ -31,6 +36,7 @@
 	omoguceno da proizvodjac proizvodi dalje i stavlja u bafer iako prethodni proizvodi nisu potroseni
 	od strane potrosaca
 	
+	// radnje za koje ne znamo koliko traju (produce() i consume()) treba obaviti van kriticne sekcije
 	const int CAPACITY = ...;
 
 	int buffer[CAPACITY];
@@ -40,20 +46,24 @@
 	Semaphore full = Semaphore(0);
 
 	void producer() {
+		int newItem;
 		while (true) {
+			newItem = produce();
 			empty.wait();
-			buffer[writeIndex] = produce();
+			buffer[writeIndex] = newItem;
 			writeIndex = (writeIndex + 1) % CAPACITY;
 			full.signal();
 		}
 	}
 
 	void consumer() {
+		int newItem;
 		while (true) {
 			full.wait();
-			consume(buffer[readIndex]);
+			newItem = buffer[readIndex];
 			readIndex = (readIndex + 1) % CAPACITY;
 			empty.signal();
+			consume(newItem);
 		}
 	}
 
@@ -67,6 +77,7 @@
 	u neku lokaciju u baferu istovremeno dok potrosac uzima iz te iste lokacije - to je obezbedjeno
 	uslovnom sinhronizacijom pomocu semafora empty i full
 	
+	// radnje za koje ne znamo koliko traju (produce() i consume()) treba obaviti van kriticne sekcije
 	const int CAPACITY = ...;
 
 	int buffer[CAPACITY];
@@ -77,10 +88,12 @@
 	Semaphore mutexP = Semaphore(1), mutexC = Semaphore(1);
 
 	void producer(int id) {
+		int newItem;
 		while (true) {
+			newItem = produce();
 			empty.wait();
 			mutexP.wait();
-			buffer[writeIndex] = produce();
+			buffer[writeIndex] = newItem;
 			writeIndex = (writeIndex + 1) % CAPACITY;
 			mutexP.signal();
 			full.signal();
@@ -88,12 +101,14 @@
 	}
 
 	void consumer(int id) {
+		int newItem;
 		while (true) {
 			full.wait();
 			mutexC.wait();
-			consume(buffer[readIndex]);
+			newItem = buffer[readIndex];
 			readIndex = (readIndex + 1) % CAPACITY;
 			mutexC.signal();
 			empty.signal();
+			consume(newItem);
 		}
 	}

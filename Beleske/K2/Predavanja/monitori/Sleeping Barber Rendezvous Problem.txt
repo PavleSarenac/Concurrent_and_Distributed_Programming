@@ -1,0 +1,138 @@
+- Sleeping Barber Rendezvous
+	* opis problema: 
+		- Imamo berberina i musterije (oni svi predstavljaju procese). Musterije dolaze do berbernice, proveravaju da li ima mesta u berbernici, i 
+		ako ima one sedaju i cekaju svoj red da budu opsluzene. Ako nema mesta, musterija ne ulazi u berbernicu, vec odlazi i onda mozda kasnije 
+		ponovo svrati ili ode u neku drugu berbernicu. Berberin sisa musteriju ukoliko ima musterije koja ceka, a ako nema onda on ceka dok neka 
+		musterija ne dodje. Berberin nakon sisanja musterije treba da joj naplati i da je isprati do izlaza. Ovaj problem je zapravo apstrakcija 
+		klijent-server arhitekture. To je slucaj zato sto imamo veci broj klijenata (musterije) koji mogu da upute svoj zahtev serveru (berberinu).
+		Berberin uzima zahteve jedan po jedan, odradjuje ih redom i obavestava musterije da je posao gotov. Tek kada trenutno opsluzivana
+		musterija napusti berbernicu, berberin moze da pocne da sisa narednu musteriju.
+	* delovi sa sinhronizacijom:
+		- musterija treba da obavesti berberina da je dosla
+		- musterija placa berberinu (potencijalno)
+		- berberin treba da obavesti musteriju da je posao zavrsen (tek tada musterija moze da napusti berbernicu)
+	* imacemo veci broj redova cekanja:
+		- jedan red cekanja za musterije koje su dosle u berbernicu i cekaju svoj red za sisanje
+		- jedan red cekanja za musteriju koja je na redu
+		- jedan red cekanja za berberina (na kom on ceka dok nema nikoga ko zeli da se sisa)
+		
+- Client/Server arhitektura
+	* berbernica ce biti predstavljena pomocu monitora
+	* imacemo dva tipa procesa:
+		- proces server (berberin)
+		- proces klijent (musterija)
+	* imacemo 3 metode:
+		- get_haircut
+			* ovu metodu poziva musterija kada zahteva sisanje
+		- get_next_customer
+			* ovu metodu poziva berberin kada je spreman da primi sledecu musteriju
+		- finished_cut
+			* ovu metodu poziva berberin kada zavrsi sisanje musterije
+	* sam proces sisanja se obavlja van monitora
+		- to je standardno pravilo, duge radnje se nikada ne obavljaju u monitorskim metodama
+	* za sinhronizaciju izmedju berberina i musterije koja je dosla na red cemo koristiti tehniku koja se zove rendezvous
+		- to je ustvari sinhronizacija na barijeri za dva procesa (berberin i bilo koja musterija koja je dosla na red)
+		
+- Sinhronizaciona stanja
+	* berberin
+		- postaje raspoloziv, sisa, i poziva napustanje
+	* musterije
+		- sede u stolici i napustaju
+	* berberin se budi kada postoji bar jedna musterija koja ceka
+	* musterija se zablokira ako vec ima neko ko se sisa ili neko ko ceka na sisanje
+	* ova stanja bismo mogli da pratimo koriscenjem brojaca:
+		- cinchair (broj musterija koje su sele u stolicu)
+		- cleave (broj musterija koje su napustile berbernicu)
+		
+		- bavail (koliko puta je berberin bio raspoloziv)
+		- bbusy (koliko puta je berberin sisao)
+		- bdone (koliko puta je berberin ispratio musteriju do izlaza)
+	* medjutim, to bi bilo isuvise komplikovano resenje i imali bismo beskonacno inkrementiranje brojaca
+	* umesto toga, koristicemo tri promenljive koje mogu da imaju vrednosti 0 ili 1
+		- barber (ovo je kao bavail - cinchair)
+			* ova promenljiva govori da li je berberin slobodan (barber = 1) ili nije (barber = 0)
+		- chair (ovo je kao cinchair - bbusy)
+			* ova promenljiva govori da li je stolica slobodna (chair = 1) ili nije (chair = 0)
+		- open (ovo je kao bdone - cleave)
+			* ova promenljiva govori da li su vrata otvorena (open = 1) ili nisu (open = 0)
+	* pomocu ovih promenljivih cemo obezbediti ping-pong komunikaciju - neko ih postavi, pa ih neko drugi resetuje
+		- takvu komunikaciju smo vec imali kod sinhronizacije na barijeri sa ili bez procesa koordinatora (neko kaze da treba nesto da se odradi,
+		a neko drugi javi da je to uradio)
+	* pretpostavka je da je berbernica u ovom slucaju neogranicenog kapaciteta i da svaka musterija koja dodje na sisanje ceka ako treba i 
+	beskonacno dugo dok ne dodje na red za sisanje
+		- kada bi berbernica bila konacnog kapaciteta, samo bismo uveli brojac koji broji koliko musterija je trenutno u berbernici
+	* sinhronizacioni uslovi:
+		- za berberina:
+			1) da musterija seda na stolicu 
+			2) da musterija odlazi iz berbernice
+		- za musteriju:
+			1) da je berberin raspoloziv 
+			2) da berberin isprati musteriju do izlaza i otvori joj vrata
+	* samo sisanje berberina se obavlja izvan naseg monitora i to nas ni ne zanima kako se dogadja, mi se ovde bavimo samo sinhronizacijom
+	* rendezvous (ping-pong komunikacija) se uvek implementira ovako:
+		- prijemna strana ceka uslov i resetuje promenljivu
+		- strana koja obavestava signalizira uslov i postavlja promenljivu
+	* rendezvous se cesto koristi kada imamo dva procesa koje treba sinhronizovati (ovde su to berberin i musterija)
+		
+* ovaj problem se moze dodatno zakomplikovati ako je potrebno sinhronizovati i musterije medjusobno, da bismo ispostovali redosled dolaska
+musterija
+	- pretpostavka u ovom slucaju je da je berbernica ogranicenog kapaciteta N
+	- moglo bi ovo da se resi pomocu Priority Wait Timer monitora gde se svakom procesu (musteriji) dodeljuje prioritet i prema tome se oni bude
+	- takodje bi moglo da se resi pomocu Andersenovog algoritma ukoliko nam nisu dostupne uslovne promenljive sa prioritetnim redovima cekanja
+		* tu bismo koristili niz od N uslovnih promenljivih gde svaka musterija ceka na svojoj i uvek se budi naredna musterija koja je na redu -
+		dakle obezbedjen je FIFO
+			- tu je logika svako jedini ceka na svojoj uslovnoj promenljivoj i onda nam je nebitno kako je ona implementirana jer svakako sigurno
+			znamo redosled posto moze samo taj jedini proces da se probudi jer jedini uvek i ceka
+
+monitor Barber_Shop {
+	int barber = 0, chair = 0, open = 0;
+	cond barber_available;  // signal kada je barber > 0
+	cond chair_occupied;  // signal kada je chair > 0
+	cond door_open;  // signal kada je open > 0
+	cond customer_left;  // signal kada je open = 0
+	
+	// ovu metodu poziva musterija kada udje u berbernicu i zeli da se sisa
+	void get_haircut() {
+		// musterija ceka da berberin postane slobodan (to ce berberin javiti tako sto ce postaviti promenljivu barber na 1)
+		while (barber == 0) {
+			barber_available.wait();
+		}
+		// berberin postaje zauzet zbog ove musterije koja je zatrazila sisanje
+		barber--;
+		// musterija ovako obavestava berberina da je sela u stolicu
+		chair++;
+		chair_occupied.signal();
+		// musterija ceka da je berberin isprati do izlaza i otvori joj vrata (znaci berberin tako obavestava musteriju da je sisanje gotovo)
+		while (open == 0) {
+			door_open.wait();
+		}
+		// postavljanjem promenljive open na 0 musterija javlja da je zatvorila vrata
+		open--;
+		// ovako musterija obavestava berberina da je otisla
+		customer_left.signal();
+	}
+	
+	// ovu metodu poziva berberin kada je spreman da zapocne novo sisanje
+	void get_next_customer() {
+		// berberin javlja musteriji da je slobodan
+		barber++;
+		barber_available.signal();
+		// berberin ceka da musterija sedne na stolicu
+		while (chair == 0) {
+			chair_occupied.wait();
+		}
+		// musterija je sela na stolicu pa berberin resetuje promenljivu chair jer je stolica sad zauzeta	
+		chair--;
+	}
+	
+	// ovu metodu poziva berberin nakon sto je zavrsio sisanje
+	void finished_cut() {
+		// berberin javlja musteriji da je gotovo sisanje
+		open++;
+		door_open.signal();
+		// berberin ceka da musterija javi da je izasla iz berbernice
+		while (open > 0) {
+			customer_left.wait();
+		}
+	}
+}

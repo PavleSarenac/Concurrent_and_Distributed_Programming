@@ -1,0 +1,116 @@
+- Readers/Writers - resenje 1 (Signal and Continue monitor - broadcast signal)
+	* moze vise citalaca istovremeno da cita, ali imamo izgladnjivanje pisaca
+	* vrlo je vazno da u funkciji releaseRead prvo proverimo da li je numOfReaders postao 0 i da samo u tom slucaju budimo 
+	pisca koji ceka (ako takav postoji)
+		- ako bismo bezuslovno uvek radili writers.signal() napravili bismo dva problema:
+			1) ako numOfReaders nije 0, onda ce se probudjeni pisac opet zablokirati - suvisno budjenje i ponovno blokiranje 
+			procesa (veliki rezijski troskovi) 
+			2) ako redovi blokiranih procesa na uslovnim promenljivama postuju FIFO redosled, onda bismo besmislenim budjenjem 
+			pisca i njegovim ponovnim blokiranjem njega prebacili na sam kraj tog reda i tako bismo poremetili FIFO redosled
+	* vrlo bitno da u funkciji releaseWrite pozivamo signal_all nad uslovnom promenljivom za citaoce
+		- kada bismo pozvali samo signal, odblokirao bi se samo jedan citalac, a moze da ih ima vise blokiranih, pa bi moglo da dodje do deadlock-a
+		- budimo sve blokirane citaoce i jednog pisca, i time ih prebacujemo u entry queue i od njegove implementacije zavisi ko ce sledeci
+		dobiti ekskluzivno pravo pristupa monitoru (ne dajemo prednost ni citaocima ni piscima ovde)
+	* nema poente da se zove signal_all nad uslovnom promenljivom za pisce jer uvek moze maksimalno jedan pisac da pise, dok ima smisla
+	zvati signal_all nad uslovnom promenljivom za citaoce jer moze vise njih istovremeno da cita
+	* ovo resenje je napravljeno za Signal and Continue disciplinu
+
+	class ReadersWritersMonitor {
+		int numOfReaders = numOfWriters = 0;
+
+		cond readers;
+		cond writers;
+
+		void readRequest() {
+			while (numOfWriters > 0) {
+				readers.wait();
+			}
+			numOfReaders++;
+		}
+
+		void readRelease() {
+			numOfReaders--;
+			if (numOfReaders == 0 && writers.queue() == true) {
+				writers.signal();
+			}
+		}
+
+		void writeRequest() {
+			while (numOfReaders > 0 || numOfWriters > 0) {
+				writers.wait();
+			}
+			numOfWriters++;
+		}
+
+		void writeRelease() {
+			numOfWriters--;
+			if (readers.queue() == true) {
+				readers.signal_all();
+			}
+			if (writers.queue() == true) {
+				writers.signal();
+			}
+		}
+	}
+
+- Readers/Writers - resenje 2 (Signal and Continue monitor - Passing the Condition) 
+	* moze vise citalaca da cita istovremeno i reseno je izgladnjivanje pisaca
+	* ovo resenje radi samo pod uslovom da uslovna promenljiva readersWriters postuje FIFO redosled
+		- jer su samo u tom slucaju onda ispravno poredjani blokirani procesi na uslovnoj promenljivoj readersWriters i stringovi u listi
+		(svaki string odgovara blokiranom procesu na istoj poziciji - 'reader' za citaoce, 'writer' za pisce)
+	* ako i entry queue postuje FIFO, onda kompletan monitor obezbedjuje FIFO redosled, u suprotnom nemamo pojma kojim ce
+	redom probudjeni procesi unutar grupe korisnika (citaoci ili pisci) zaista ulaziti u monitor
+	* ovde koristimo tehniku Passing the Condition, sto znaci da proces koji budi drugi proces radi posao umesto njega 
+	(u ovom primeru to je inkrementiranje brojaca numOfReaders ili numOfWriters)
+	
+	class ReadersWritersMonitor {
+		int numOfReaders = numOfWriters = 0;
+
+		Queue<char*> queue;
+
+		cond readersWriters;
+
+		void readRequest() {
+			if (numOfWriters > 0 || queue.size() > 0) {
+				queue.insert("reader");
+				readersWriters.wait();
+			} else {
+				numOfReaders++;
+			}
+		}
+
+		void readRelease() {
+			numOfReaders--;
+			if (numOfReaders == 0 && queue.size() > 0) {
+				queue.remove(0);
+				numOfWriters++;
+				readersWriters.signal();
+			}
+		}
+
+		void writeRequest() {
+			if (numOfReaders > 0 || numOfWriters > 0 || queue.size() > 0) {
+				queue.insert("writer");
+				readersWriters.wait();
+			} else {
+				numOfWriters++;
+			}   
+		}
+
+		void writeRelease() {
+			numOfWriters--;
+			if (queue.size() > 0) {
+				if (queue.get(0) == "reader") {
+					while (queue.get(0) == "reader") {
+						queue.remove(0);
+						numOfReaders++;
+						readersWriters.signal();
+					} 
+				} else if (queue.get(0) == "writer") {
+					queue.remove(0);
+					numOfWriters++;
+					readersWriters.signal();
+				}
+			}	
+		}
+	}

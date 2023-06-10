@@ -2,85 +2,89 @@
 - Jednoelementni bafer
 	* sme vise potrosaca istovremeno da cita iz bafera, nikakav problem - to je dobra konkurentnost
 	* potrebno je da svaki potrosac ima svoj semafor da bi se obezbedilo da svaki potrosac tacno jednom
-	procita iz bafera (da ne bi bilo moguce da npr. jedan potrosac procita N puta iz bafera, a ostali nijednom)
+	procita iz bafera (da ne bi bilo moguce da npr. jedan potrosac procita M puta iz bafera, a ostali nijednom)
 */
 
-const int N = ...;  // broj potrosaca (consumer-a)
-const int B = 1;  // velicina bafera
+const int M = ...;  // broj potrosaca
 
-int cnt = 0;  // brojac potrosaca koji su procitali iz bafera
-int buffer[1] = {};
+int buffer;  
+int consumerCnt = 0;  // brojac potrosaca koji su procitali iz bafera
 
-sem mutex = 1;
-sem empty = B;
-sem full[N] = {0};
+Semaphore empty = Semaphore(1);
+Semaphore full[M] = {Semaphore(0)};
+Semaphore mutexC = Semaphore(1);
 
 void producer() {
-	while (1) {
-		int item = produce();
-		wait(empty);
-		buffer[0] = item;
-		for (int i = 0; i < N; i++) {
-			signal(full[i]);
-		}
-	}
+    int newItem;
+    while (true) {
+        newItem = produce();
+        empty.wait();
+        buffer = newItem;
+        for (int i = 0; i < M; i++) {
+            full[i].signal();
+        }
+    }
 }
 
 void consumer(int id) {
-	while (1) {
-		wait(full[id]);
-		int item = buffer[0];
-		wait(mutex);
-		cnt++;
-		if (cnt == N) {
-			cnt = 0;
-			signal(empty);
-		}
-		signal(mutex);
-		consume(item);
-	}
+    int newItem;
+    while (true) {
+        full[id].wait();
+        newItem = buffer;
+        mutexC.wait();
+        consumerCnt++;
+        if (consumerCnt == M) {
+            consumerCnt = 0;
+            empty.signal();
+        }
+        mutexC.signal();
+        consume(newItem);
+    }
 }
 
 /*
 - Viseelementni bafer
-	* proizvodjac stavlja proizvode u bafer velicine B, i svih N potrosaca treba da procita proizvode sa svih pozicija iz tog bafera, dakle svaka pozicija u baferu treba da bude procitana po N puta
+	* proizvodjac stavlja proizvode u bafer velicine CAPACITY, i svih M potrosaca treba da procita proizvode sa svih pozicija iz tog bafera, dakle svaka pozicija u baferu treba da bude procitana po M puta
 */
 
-const int N = ...;  // broj potrosaca (consumer-a)
-const int B = ...;  // velicina bafera
-int cnt[B] = {0};  // niz brojaca za svaku poziciju u baferu - broji se za svaku poziciju u baferu koliko potrosaca je citalo sa te pozicije
-int buffer[B] = {};
+const int CAPACITY = ...;  // kapacitet bafera
+const int M = ...;  // broj potrosaca
 
-sem mutex[B] = {1};
-sem empty = B;
-sem full[N] = {0};
+int buffer[CAPACITY];
+int consumerCnt[CAPACITY] = {0};  // za svaku poziciju u baferu brojimo koliko potrosaca je procitalo odatle
 
+Semaphore empty = Semaphore(CAPACITY);
+Semaphore full[M] = {Semaphore(0)};
+Semaphore mutexC[CAPACITY] = {Semaphore(1)};  // koristimo niz mutexa da bi mogli brojaci za razlicite pozicije da se menjaju 
+                                              // istovremeno - bolja konkurentnost
 void producer() {
-	int wi = 0;  // pozicija u baferu na koju se upisuje (writeIndex)
-	while (1) {
-		int item = produce();
-		wait(empty);
-		buffer[wi] = item;
-		wi = (wi + 1) % B;
-		for (int i = 0; i < N; i++) {
-			signal(full[i]);
-		}
-	}
+    int writeIndex = 0;
+    int newItem;
+    while (true) {
+        newItem = produce();
+        empty.wait();
+        buffer[writeIndex] = newItem;
+        writeIndex = (writeIndex + 1) % CAPACITY;
+        for (int i = 0; i < M; i++) {
+            full[i].signal();
+        }
+    }
 }
 
 void consumer(int id) {
-	int ri = 0;  // pozicija u baferu sa koje potrosac cita (readIndex)
-	while (1) {
-		wait(full[id]);
-		int item = buffer[ri];
-		wait(mutex[ri]);  // bolja konkurentnost sa nizom mutex-a jer je onda moguce razlicite pozicije u nizu brojaca menjati istovremeno
-		cnt[ri]++;
-		if (cnt[ri] == N) {  // svih N potrosaca su procitali proizvod sa pozicije ri iz bafera, pa proizvodjac moze da stavi nov proizvod na tu poziciju
-			cnt[ri] = 0;
-			signal(empty);
-		}
-		signal(mutex[ri]);
-		consume(item);
-		ri = (ri + 1) % B;
-	}
+    int newItem;
+    int readIndex = 0;
+    while (true) {
+        full[id].wait();
+        newItem = buffer[readIndex];
+        mutexC[readIndex].wait();
+        consumerCnt[readIndex]++;
+        if (consumerCnt[readIndex] == M) {
+            consumerCnt[readIndex] = 0;
+            empty.signal();
+        }
+        mutexC[readIndex].signal();
+        readIndex = (readIndex + 1) % CAPACITY;
+        consume(newItem);
+    }
 }

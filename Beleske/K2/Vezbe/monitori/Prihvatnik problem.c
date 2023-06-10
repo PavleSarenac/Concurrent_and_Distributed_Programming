@@ -33,7 +33,7 @@ monitor Buffer {
         if (full.queue()) {
             full.signal();
         }
-        if (full.queue() && size > 0) {
+        if (full.queue() && size >= 1) {
             full.signal();
         }
         if (empty.queue() && size <= N - 2) {

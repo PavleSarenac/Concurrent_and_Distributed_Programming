@@ -48,5 +48,5 @@
 	}
 	
 	- notifyAll() ubija performanse jer budi sve niti - veliki rezijski troskovi
-	- metode wait, notify i notifyAll smeju da se zovu samo za objekte za koje smo dobili ekskluzivno pravo pristupa (dakle unutar synchronized
-	bloka za taj objekat)
+	- metode wait, notify i notifyAll smeju da se zovu samo za objekte za koje smo dobili ekskluzivno pravo pristupa (dakle unutar 
+	synchronized bloka za taj objekat)
