@@ -1,5 +1,0 @@
-package rs.ac.bg.etf.kdp.sanja2;
-
-public class Producer extends Thread {
-
-}

@@ -1,5 +1,0 @@
-INDEX VERSION 1.131+C:\Users\saren\OneDrive\Documents\ETF\6. semestar\Concurrent_and_Distributed_Programming\Concurrent_and_Distributed_Programming\Labovi\.metadata\.plugins\org.eclipse.jdt.core
-4044757637.index
-105201968.index
-2193957894.index
-1865797976.index

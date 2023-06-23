@@ -1,0 +1,74 @@
+- Konkurentno programiranje
+	* procesi dele zajednicku memoriju
+	* procesi komuniciraju koristeci deljene promenljive
+	
+- Distribuirano programiranje
+	* memorija je distribuirana (procesi ne komuniciraju koriscenjem deljenih promenljivih)
+	* procesi komuniciraju iskljucivo razmenom poruka
+		- komunikacioni kanali
+		- sanducici
+		- RPC (Remote Procedure Call)
+			* u Javi se ovo naziva RMI (Remote Method Invocation)
+			* korisnik ne mora da zna uopste da se nalazi u distribuiranom racunarskom sistemu
+			* ovo predstavlja poziv metode koja se uopste ne nalazi na nasem racunaru, ali programer to uopste ne mora da zna,
+			njemu taj poziv treba da izgleda kao najobicniji poziv neke metode na njegovom racunaru - treba da bude sakrivena
+			od njega implementacija RPC
+		- rendezvous
+			* ovaj koncept smo vec razmatrali kod Sleeping Barber Problem
+	* obicno su procesi koji komuniciraju na razlicitim racunarima, ali to ni ne mora da bude slucaj
+		- npr. kod Andriod mobilnih uredjaja procesi komuniciraju razmenom poruka iako su na istom racunaru
+	* kod distribuiranog programiranja nema deljenih promenljivih
+		- upravo zato sto svaki proces ima svoju memoriju i nije ni moguce da neki proces pristupi memoriji drugog procesa
+		- zato, da bi procesi mogli da komuniciraju, definisu se operacije za slanje i prijem poruka - moracemo da se nekako zna ko salje poruku
+		i ko prima poruku, gde se oni nalaze, kako se do njih dolazi, ali se mi necemo baviti time (telekomunikacionom infrastrukturom)
+			* mi cemo da razmatramo kako se implementiraju komunikacioni kanali (sanducici) koji ce omoguciti komunikaciju izmedju procesa
+	
+- Razmena poruka (Message Passing)
+	* u konkurentnom programiranju smo se vec susreli sa problemom koji lici na razmenu poruka (Atomic Broadcast - tu je jedan proces upisivao
+	podatke u bafer, a ostali su citali)
+	* definisacemo specijalne mrezne operacije koje ukljucuju sinhronizaciju (message passing primitives)
+	* iz jednog komunikacionog kanala (sanduceta) ce tipicno jedan proces moci da cita podatke
+		- objasnjenje: ljudi obicno npr. nemaju dva telefona tako da oba telefona imaju isti broj, pa da na oba telefona primaju iste poruke
+		- dakle, nije predvidjeno da iz jednog komunikacionog kanala vise procesa cita podatke, vec samo jedan
+	* procesi ipak mogu i da dele nekad komunikacione kanale
+		- kanali su tipicno jedini objekat kog procesi mogu da dele u distribuiranom programiranju
+	* razmena poruka (Message Passing) omogucava komunikaciju izmedju posiljaoca (sender) i primaoca (receiver) koriscenjem komunikacionog
+	kanala
+	* za sad cemo se baviti samo Unicast komunikacijom (izmedju dva procesa)
+	* u distribuiranom programiranju nemamo semafore, monitore i regione, vec koristimo komunikacione kanale
+	
+	* osobine komunikacionog kanala:
+		- cuva se redosled poruka (red postuje FIFO)
+		- omogucen je atomski pristup komunikacionom kanalu
+			* imacemo dve metode pomocu kojih se poruka stavlja u kanal (slanje poruke) ili dohvata iz kanala (prijem poruke)
+		- moze se specificirati tip podatka koji se salje
+		- komunikacioni kanali vode racuna o greskama koje mogu da se pojave
+		- pretpostavicemo u nasim problemima da su komunikacioni kanali beskonacne velicine, ali svakako oni nisu predvidjeni da cuvaju veliku kolicinu
+		podataka (npr. nikako ne bismo smeli da komunikacioni kanal koristimo kao bafer za cuvanje podataka kod Producer Consumer problema)
+			* ukoliko preteramo sa kolicinom podataka koje pokusamo da smestimo u komunikacioni kanal, metoda za slanje poruke ce emitovati
+			gresku i reci nam da slanje nije uspelo da se realizuje
+			
+	* postoje razne varijante razmene poruka (message passing-a)
+		- asinhrona (u Javi) ili sinhrona komunikacija (u CSP-u)
+			* kod asinhrone komunikacije poruka se posalje i proces odmah nastavlja dalje izvrsavanje - uopste ne ceka da drugi proces primi poruku
+			* kod sinhrone komunikacije poruka se posalje i proces koji je poslao ceka dok druga strana ne javi da je primila poruku (rendezvous)
+		- staticko (direktno) ili dinamicko (indirektno) imenovanje
+			* kod statickog imenovanja unapred mora da se zna kome se salje poruka
+			* kod dinamickog imenovanja ne mora unapred da se zna kome se salje poruka, vec se to dinamicki odredjuje
+				- danas se najvise koristi dinamicko imenovanje, ali opet dosta aplikacija koristi staticko imenovanje jer znaju uvek s kim treba da
+				komuniciraju (npr. YouTube, WhatsApp, Messenger uglavnom komuniciraju sa nekoliko fiksnih adresa kako bi pruzili uslugu korisniku)
+		- protok informacija u jednom ili dva smera
+			- u Javi cemo imati koncept socket-a (prikljucnica) koji ce se otvoriti izmedju dve strane koje komuniciraju i preko kog ce procesi
+			moci da primaju i salju poruke (socket-i nam omogucavaju protok informacija u oba smera)
+		- blokirajuci ili neblokirajuci komunikacioni kanali
+		- razlicit broj procesa moze biti prikacen na jedan komunikacioni kanal:
+			* 1-1 (Point-to-Point (P2P))
+				- jedan proces salje poruku drugom procesu
+			* N-1
+				- vise razlicitih procesa moze da salje poruke preko istog komunikacionog kanala nekom drugom procesu (npr. vise razlicitih klijenata
+				koji salju zahteve jednom istom serveru)
+			* 1-N
+				- ovo je u sustini broadcast - jedan proces salje poruku na komunikacioni kanal sa kog moze vise drugih procesa da je primi
+			* N-N
+				- vise procesa moze da salje poruke na isti komunikacioni kanal, a takodje moze i vise procesa da prima poruke sa tog kanala
+					* ovo se koristi kod nekih serverskih resenja da bi mogla komunikacija da se sprovede brze
