@@ -1,9 +1,9 @@
 - Asinhrona razmena poruka (Asynchronous Message Passing)
 	* deklaracija komunikacionog kanala (u njega se smesta poruka)
-		- chan nazivKanala(type1 id1, ..., typen idn);
+		- Channel nazivKanala(type1 id1, ..., typen idn);
 		- neophodno je precizirati tipove (to su tipovi podataka koji ce se slati putem kanala), a pisanje id-eva je opciono
 	* poruke se salju i primaju pomocu komunikacionih primitiva (metoda) send i receive
-		- send nazivKanala(expr1, ..., exprn);
+		- send nazivOutputKanala(expr1, ..., exprn);
 			* expr1, ... exprn su argumenti koji se salju putem kanala (to su neki izrazi koji moraju da se sracunaju na strani posiljaoca i onda se 
 			rezultati salju po vrednosti primaocu (ne mozemo da saljemo nista po referenci, sve se salje po vrednosti))
 			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
@@ -11,14 +11,14 @@
 			poruke, dakle ne ceka da je primalac zaista i primi
 			* u nasim problemima pretpostavicemo da je kanal neogranicenog kapaciteta
 				- medjutim, svejedno cemo paziti da ne preteramo sa kolicinom podataka koje stavimo u nas kanal
-					* npr. kod problema Producer Consumer necemo u kanal odmah ubacivati poruku, nego cemo prvo traziti dozvolu, tj. da se proveri
-					da li ima mesta u kanalu, pa tek ako ima onda cemo slati poruku
-		- receive var(var1, ..., varn);
+					* npr. kod problema Producer Consumer necemo u kanal odmah ubacivati poruku, nego cemo prvo traziti dozvolu, tj. da se 
+					proveri da li ima mesta u kanalu, pa tek ako ima onda cemo slati poruku
+		- receive nazivInputKanala(var1, ..., varn);
 			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
 			* metoda receive kod asinhrone razmene poruka je blokirajuca - proces koji ceka da primi poruku se blokira sve dok je ne primi
 	* ponekad postoji metoda empty(c) koja vraca true ukoliko je nas komunikacioni kanal prazan
-		- ona moze da bude korisna da bi proces mogao, ukoliko je kanal prazan, da uzme da radi nesto korisno umesto da ceka poruku u blokiranom
-		stanju, a nece je primiti sigurno dok je kanal prazan
+		- ona moze da bude korisna da bi proces mogao, ukoliko je kanal prazan, da uzme da radi nesto korisno umesto da ceka poruku u 
+		blokiranom stanju, a nece je primiti sigurno dok je kanal prazan
 		- necemo koristiti ovu metodu u nasim resenjima, nece biti potrebe
 	* poredjenje semafora sa asinhronom razmenom poruka:
 		- semafor <=> kanal

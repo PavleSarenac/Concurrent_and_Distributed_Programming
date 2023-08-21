@@ -9,8 +9,8 @@
 		- svaki klijent kreira proces sa privatnim reply kanalom na koji ce mu server slati odgovor
 	* mi cemo koristiti staticko imenovanje - klijent ce uvek morati da posalje svoj identifikator
 	* server mora da zna kome treba da odgovori
-		- to cemo u nasem slucaju resavati tako sto ce klijent morati da se predstavi serveru tako sto ce mu proslediti svoj identifikator kao deo
-		svoje poruke
+		- to cemo u nasem slucaju resavati tako sto ce klijent morati da se predstavi serveru tako sto ce mu proslediti svoj identifikator kao 
+		deo svoje poruke
 		- u programskom jeziku Java:
 			* ukoliko imamo dugozivecu konekciju izmedju klijenta i servera, pomocu porta i IP adrese sa obe strane ce se
 			tacno znati ko s kim komunicira (te podatke mozemo sami da dobijemo iz naseg komunikacionog kanala)
@@ -31,8 +31,8 @@ proces ima svoj par ovih kanala
 		* zato je ovakva operacija ekvivalentna monitorskoj operaciji u konkurentnom programiranju
 	- ovako nas napravljen server predstavlja jedan aktivan monitor sa jednom operacijom
 
-chan request(int clientId, types of input values);
-chan reply[n] (types of results);
+Channel request(int clientId, types of input values);
+Channel reply[n] (types of results);
 
 void server() {
 	int clientId;
@@ -132,90 +132,84 @@ te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 - FIFO Semaphore (napravljen pomocu monitora u konkurentnom programiranju)
 	* simuliran pomocu aktivnog monitora u distribuiranom programiranju
 
-- Ovde cemo semafor napraviti preko simuliranog monitora u konkurentnom programiranju sa Signal and Wait disciplinom
-	* kada se pozove signal, odmah ce biti probudjen odgovarajuci klijent i on ce odmah nastaviti svoje izvrsavanje - Signal and Wait
-	
-chan request(int clientId, string operationKind);
-chan reply[] (dummyType);
+	- Ovde cemo semafor napraviti preko simuliranog monitora u konkurentnom programiranju sa Signal and Wait disciplinom
+		* kada se pozove signal, odmah ce biti probudjen odgovarajuci klijent i on ce odmah nastaviti svoje izvrsavanje - Signal and Wait
+		
+	Channel request(int clientId, string operationKind);
+	Channel reply[] (dummyType);
 
-void ServerFIFOSemaphore() {
-	int s = 0;
-	// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
-	// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
-	queue blockedQueue;
-	int clientId;
-	string operationKind;
-	while (true) {
-		receive request(clientId, operationKind);
-		switch (operationKind) {
-			case "semWait":
-				if (s == 0) {
-					blockedQueue.put(clientId);
-				} else {
-					s--;
-					send reply[clientId] (dummyObject);
-				}
-				break;
-			case "semSignal":
-				if (blockedQueue.size() == 0) {
-					s++;
-					// ovaj send reply ovde nije ni morao da se uradi jer poziv metode signal u semaforu nije blokirajuca operacija, pa to znaci da onaj
-					// koji je pozvao signal uopste ni ne ceka nikakav odgovor vec je asinhrono pozvao signal i nastavio dalje sa izvrsavanjem
-					send reply[clientId] (dummyObject);
-				} else {
-					send reply[blockedQueue.remove(0)] (dummyObject);
-				}
-				break;
-		}
-	}
-}
-
-- Ovde cemo semafor napraviti preko simuliranog monitora u konkurentnom programiranju sa Signal and Continue disciplinom
-	* kada se pozove signal, klijent koji treba da se probudi nece odmah nastaviti svoje izvrsavanje, vec ce prvo biti prebacen iz reda blokiranih
-	procesa u entry queue (red procesa koji cekaju da udju u monitor), pa ce tek kada dodje na red po FIFO principu on zaista biti probudjen i
-	iz entry queue i nastaviti svoje izvrsavanje
-
-chan request(int clientId, string operationKind);
-chan reply[] (dummyType);
-
-void ServerFIFOSemaphore() {
-	int s = 0;
-	// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
-	// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
-	queue blockedQueue;
-	// simuliramo entry queue pomocu ovog reda
-	queue entryQueue;
-	int clientId;
-	string operationKind;
-	while (true) {
-		if (entryQueue.size() > 0) {
-			send reply[entryQueue.remove(0)] (dummyObject);
-			continue;
-		} else {
+	void ServerFIFOSemaphore() {
+		int s = 0;
+		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
+		// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
+		queue blockedQueue;
+		int clientId;
+		string operationKind;
+		while (true) {
 			receive request(clientId, operationKind);
-		}
-		switch (operationKind) {
-			case "semWait":
-				if (s == 0) {
-					blockedQueue.put(clientId);
-				} else {
-					s--;
-					send reply[clientId] (dummyObject);
-				}
-				break;
-			case "semSignal":
-				if (blockedQueue.size() == 0) {
-					s++;
-					// ovaj send reply ovde nije ni morao da se uradi jer poziv metode signal u semaforu nije blokirajuca operacija, pa to znaci da onaj
-					// koji je pozvao signal uopste ni ne ceka nikakav odgovor vec je asinhrono pozvao signal i nastavio dalje sa izvrsavanjem
-					send reply[clientId] (dummyObject);
-				} else {
-					entryQueue.put(blockedQueue.remove(0));
-				}
-				break;
+			switch (operationKind) {
+				case "semWait":
+					if (s == 0) {
+						blockedQueue.put(clientId);
+					} else {
+						s--;
+						send reply[clientId] (dummyObject);
+					}
+					break;
+				case "semSignal":
+					if (blockedQueue.size() == 0) {
+						s++;
+					} else {
+						send reply[blockedQueue.remove(0)] (dummyObject);
+					}
+					break;
+			}
 		}
 	}
-}
+
+	- Ovde cemo semafor napraviti preko simuliranog monitora u konkurentnom programiranju sa Signal and Continue disciplinom
+		* kada se pozove signal, klijent koji treba da se probudi nece odmah nastaviti svoje izvrsavanje, vec ce prvo biti prebacen iz reda blokiranih
+		procesa u entry queue (red procesa koji cekaju da udju u monitor), pa ce tek kada dodje na red po FIFO principu on zaista biti probudjen i
+		iz entry queue i nastaviti svoje izvrsavanje
+
+	Channel request(int clientId, string operationKind);
+	Channel reply[] (dummyType);
+
+	void ServerFIFOSemaphore() {
+		int s = 0;
+		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
+		// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
+		queue blockedQueue;
+		// simuliramo entry queue pomocu ovog reda
+		queue entryQueue;
+		int clientId;
+		string operationKind;
+		while (true) {
+			if (entryQueue.size() > 0) {
+				send reply[entryQueue.remove(0)] (dummyObject);
+				continue;
+			} else {
+				receive request(clientId, operationKind);
+			}
+			switch (operationKind) {
+				case "semWait":
+					if (s == 0) {
+						blockedQueue.put(clientId);
+					} else {
+						s--;
+						send reply[clientId] (dummyObject);
+					}
+					break;
+				case "semSignal":
+					if (blockedQueue.size() == 0) {
+						s++;
+					} else {
+						entryQueue.put(blockedQueue.remove(0));
+					}
+					break;
+			}
+		}
+	}
 
 - analogija izmedju monitora iz konkurentnog programiranja i aktivnog monitora iz distribuiranog programiranja
 	* wait iskaz <=> cuvanje zahteva koji cekaju (u red npr. kao sto smo uradili u prosla dva primera)

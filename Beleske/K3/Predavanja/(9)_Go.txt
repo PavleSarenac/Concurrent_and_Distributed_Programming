@@ -1,0 +1,147 @@
+- Go
+	* ima podrsku za:
+		- rad sa komunikacionim kanalima
+		- asinhronu i sinhronu komunikaciju
+		- lagane niti (go-routine)
+		- alternativnu komandu
+			* zahvaljujuci alternativnoj komandi, moguce je istovremeno primanje i slanje vise poruka, kao sto je to i zamisljeno
+			programskim modelom CSP
+			* ovo ne postoji npr. u programskom jeziku Java
+	* sintaksa programskog jezika Go je mesavina sintaksi:
+		- programskog jezika C
+		- funkcionalnog programiranja (lambda izrazi)
+		- programskog modela CSP (Communicating Sequential Processes)
+		
+- Komunikacioni kanali
+	* kreiranje komunikacionog kanala:
+		c := make (chan int)
+			- ovako se kreira sinhroni komunikacioni kanal c koji prima promenljive tipa int
+			- velicina ovog kanala je 0 - samim tim je on logicno i sinhroni kanal jer to znaci da ce se proces koji salje poruku zablokirati dok
+			je drugi proces ne primi (koji je takodje naravno blokiran dok ne primi poruku)
+		c := make (chan int, 10)
+			- ovako se kreira asinhroni komunikacioni kanal c koji prima promenljive tipa int i koji je velicine 10 (moze maksimalno 10 poruka da
+			se baferise u kanalu, ako bi dosla npr. 11. poruka, proces koji je poslao bi se zablokirao dok proces primalac ne procita neku poruku
+			iz svog bafera)
+			- komunikacioni kanali su uvek nekog ogranicenog kapaciteta, tako da nije uvek garantovano da ce bas svaka komunikacija biti 
+			obavljena asinhrono, tj. da se proces posiljalac nikad nece blokirati, upravo jer moze da se dogodi da se bafer nekog kanala napuni, 
+			pa da posiljalac mora da se blokira dok se ne oslobodi prostor u baferu
+	* slanje poruke x u komunikacioni kanal chan1
+		chan1 <- x
+	* prijem poruke iz komunikacionog kanala chan1 i njeno smestanje u promenljivu x
+		x = <- chan1
+		- moguc je i prijem poruke bez smestanja u promenljivu (kada nam nije vazan sadrzaj same poruke, vec samo da je proces primi - to su
+		poruke cija je jedina svrha sinhronizacija)
+			<- chan1
+	* zatvaranje komunikacionog kanala chan1 - ovo moze biti korisno npr. kod alternativne komande kada zelimo da alternative vezane
+	za neki komunikacioni kanal postanu nedostizne - to se moze postici upravo zatvaranjem tog komunikacionog kanala
+		close(chan1)
+		
+- Funkcije
+	* u programskom jeziku Go moguce je definisati funkciju unutar druge funkcije
+	* programski jezik Go koriste velike kompanije koje imaju mnogo racunara
+	* pozivi funkcija:
+		f(x)
+			- obican (sinhroni) poziv funkcije - proces u cijem toku kontrole je pozvana funkcija se blokira dok se njeno izvrsavanje ne zavrsi
+			- f je definicija funkcije
+		go f(x)
+			- funkcija se poziva kao zasebna (asinhrona) laka nit koja se zove "go-routine" i koja se izvrsava u zasebnom toku kontrole
+			- go-routine (laka nit) se zavrsava ranije ukoliko se zavrsi roditeljski proces koji je kreirao tu laku nit
+		defer f(x)
+			- izvrsavanje poziva funkcije se odlaze do kraja procesa (podseca logicki na finally segment koda)
+			- ako ima vise ovakvih funkcija, one se izvrsavaju po LIFO principu
+			
+- Go-routine
+	package main
+	import ( 
+		"fmt"
+		"time"
+	)
+	func main() {
+		foo := make(chan int, 10)
+		go func() {  // neimenovana funkcija definisana pri samom pozivu
+			time.Sleep(1000)
+			foo <- 1
+		} ()  // poziv same funkcije
+		go func() {  // neimenovana funkcija definisana pri samom pozivu
+			time.Sleep(1)
+			foo <- 2
+		} ()  // poziv same funkcije
+		fmt.Println("first = ", <- foo)
+		fmt.Println("second = ", <- foo)
+	}
+	
+- Select
+	* ovo je ustvari skoro pa identicno alternativnoj komandi iz CSP
+		- razlika je sto u select-u u programskom jeziku Go mogu grane da budu kako slanje, tako i prijem poruka, dok su u alternativnoj
+		komandi u programskom modelu CSP grane bile iskljucivo prijem poruka
+	* dakle, select omogucava da nit (go-routine) ceka istovremeno na vise komunikacionih kanala bilo za slanje bilo za prijem
+	* naredba select blokira pozivajucu nit sve dok bar jedan uslov ne postane ispunjen
+	* ukoliko ima vise ispunjenih uslova istovremeno, nedeterministicki se bira u koju granu se ulazi
+	select {
+		case receive1:
+		...
+		case send1:
+		...
+	}
+	
+- Primer upotrebe select-a
+	package main
+	import "fmt"
+	func main() {
+		c := make(chan int)  // sinhroni kanal
+		quit := make(chan int)  // sinhroni kanal
+		go func() {
+			for i := 0; i < 10; i++ {
+				fmt.Println(<- c)
+			}
+			quit <- 0
+		} ()
+		fibonacci(c, quit)
+	}
+	
+	func fibonacci(c, quit chan int) {
+		x, y := 0, 1
+		for {  // kao repetitivna alternativna komanda u CSP (ponavlja se sve dok je moguc ulaz u bar jednu granu)
+			select {
+				case c <- x:
+					x, y = y, x + y
+				case <- quit:
+					fmt.Println("quit")
+					return
+			}
+		}
+	}
+	
+- Default
+	* kod select naredbe moze se iskoristiti i podrazumevana (default) grana u slucaju da nijedna druga grana nije ispunjena
+	* ima smisla iskoristiti kada su potrebni slanje i prijem poruka bez blokiranja
+	package main
+	import (
+		"fmt"
+		"time"
+	)
+	func main() {
+		tick := time.Tick(100 * time.Millisecond)  // implementacija periodicnog dogadjaja pomocu komunikacionog kanala tick
+		boom := time.After(500 * time.Millisecond)  // jednom ce se smestiti vrednost u komunikacioni kanal boom
+		for {
+			select {
+				case <- tick:
+					fmt.Println("tick")
+				case <- boom:
+					fmt.Println("boom")
+					return
+				default:
+					fmt.Println("default")
+					time.Sleep(50 * time.Millisecond)
+			}
+		}
+	}
+	
+- Barijera
+	* u paketu sync postoji predefinisani tip WaitGroup koji definise barijeru sa operacijama:
+		- Add(m)
+			* kreira barijeru sa m procesa
+		- Done()
+			* signalizira da je pozivajuci proces prosao barijeru
+		- Wait()
+			* pozivajuci proces ceka dok svih m procesa ne dodju do barijere

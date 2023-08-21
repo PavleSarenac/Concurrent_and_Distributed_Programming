@@ -18,10 +18,10 @@
 	* iza naziva procesa mogu se nalaziti i zagrade u okviru kojih je navedena lista celobrojnih vrednosti (npr. proc(1), proc(1, 2) itd.)
 		- u tom slucaju i naziv procesa i lista predstavljaju jedinstveni identifikator, tj. ime procesa (imeProcesa)
 	* deklaracija paralelnih procesa
-		[proc1 :: impl1 || ... || procN :: implN]
-	* skraceni nacin za deklaraciju: [X(i: 1..n) :: proc]
+		[proc1::impl1 || ... || procN::implN]
+	* skraceni nacin za deklaraciju: [X(i: 1..n)::proc]
 		- kada imamo vise procesa sa istom implementacijom
-		[X(1)::proc(1) || ... || X(n) :: proc(n)]
+		[X(1)::proc(1) || ... || X(n)::proc(n)]
 		
 - Komunikacija
 	* komunikacione primitive:
@@ -143,8 +143,8 @@
 	]
 		
 	* resenje koje je malo vise fer prema piscima
-		- ukoliko dodje neki pisac koji zeli da pise, onda se ceka da svi trenutni citaoci zavrse citanje i onda ce pisac dobiti dozvolu da pise (nece se
-		za to vreme prihvatati novi citaoci koji zele da citaju)
+		- ukoliko dodje neki pisac koji zeli da pise, onda se ceka da svi trenutni citaoci zavrse citanje i onda ce pisac dobiti dozvolu da pise 
+		(nece se za to vreme prihvatati novi citaoci koji zele da citaju)
 	
 	[R(i:1..numberOfReaders)::reader || W(i:1..numberOfWriters)::writer || RW::buffer]
 
