@@ -1,0 +1,256 @@
+- RPC (Remote Procedure Calls) i Rendezvous
+	* nov nacin komunikacije izmedju procesa u distribuiranom programiranju
+	* zelimo da klijentu koji koristi distribuirani sistem bude potpuno svejedno da li je to sto koristi kod njega lokalno na racunaru, ili se nalazi
+	na nekom drugom - klijent ne treba uopste da zna gde se nalazi npr. neka procedura koju on poziva jer mu to nije ni vazno sve dok ona
+	odradjuje ocekivani posao
+	* sve sto radimo iz distribuiranog programiranja je zamisljeno za komunikaciju u klijent-server arhitekturi
+		- nije zamisljeno za npr. simetricnu (svaki proces komunicira sa svim ostalima) ili prstenastu (svi procesi komuniciraju samo sa dva svoja
+		suseda) arhitekturu, vec za nesto nalik centralizovanoj arhitekturi (jedan proces komunicira sa svim ostalima), pri cemu ne mora uvek 
+		postojati samo jedan server, moze ih biti i vise
+	* dakle, zelimo da napravimo nacin za razmenu poruka izmedju klijenata i servera tako da klijent moze da posalje neki zahtev serveru i
+	da dobije nazad odgovor preko komunikacionog kanala koji je neko drugi napravio u pozadini - ne zelimo da klijent brine o komunikacionom
+	kanalu
+		- zato se koristi dvosmerni (bidirekcioni) komunikacioni kanal
+			* slicna logika kao sto u Javi mozemo iz jednog socket-a da izvucemo InputStream i OutputStream i tako komuniciramo sa serverom,
+			tako je i ovde moguce slati i primati poruke kroz isti komunikacioni kanal
+	* za ovakav vid komunikacije, klijent ce morati prvi da posalje zahtev serveru za koriscenje neke njegove procedure, a server ce morati
+	da osluskuje ovakve zahteve da bi mogao da ih primi - zato i server mora nekako da razglasi klijentima gde to on tacno osluskuje zahteve, i
+	to cemo uskoro saznati kako se radi
+	* ovakav novi vid komunikacije u klijent-server arhitekturi omogucuju sledeca dva koncepta:
+		1) RPC (Remote Procedure Calls)
+		2) Rendezvous
+	* sto se klijenta tice, za njega nema nikakve razlike da li se u pozadini koristi RPC ili Rendezvous, ali sto se servera tice postoji razlika, 
+	kao sto cemo ubrzo i videti
+		
+- RPC (Remote Procedure Calls)
+	* sto se klijenta tice, ovo je najobicniji poziv procedure iako je moguce da pozvana procedura uopste nije definisana na klijentskom
+	racunaru, vec na nekom serverskom
+		- prevodilac ce da obezbedi komunikacioni kanal preko kog ce se obavljati razmena poruka i to je sve sakriveno od klijenta
+	* kada klijent pozove neku proceduru, on ce se blokirati sve dok se procedura ne izvrsi
+		- ovaj koncept nije nista novo, svakako regularni poziv neke procedure je uvek sinhroni, tj. pozivalac se blokira dok se procedura
+		ne izvrsi
+	* kada stigne zahtev serveru od klijenta da se izvrsi neka procedura, server ce kreirati novu nit u okviru koje ce izvrsiti tu proceduru
+	* posto se za obradu svakog zahteva na serveru kreira zasebna nit, neophodno je rucno obezbediti na serveru sinhronizaciju tih niti
+	uz pomoc koncepata iz konkurentnog programiranja (npr. semafori)
+	* sve serverske procedure koje klijenti mogu da koriste moraju biti deklarisane na serveru na odredjen nacin kako bi one bile vidljive
+	klijentima (isto kao sto je kod RMI u Javi morao da se deklarise interfejs na serveru sa svim metodama koje smo zeleli da klijenti mogu 
+	da koriste)
+	* deklaracija serverskih procedura izgleda ovako konceptualno:
+		typedef struct RPCModule {
+			// deklaracije procedura koje ce klijenti koristiti
+			void procedure1();
+			int procedure2(int a, int b);
+			
+			// serverski proces
+			void server() {
+				while (true) {
+					// ovde server prihvata zahteve od klijenta i za svaki pravi novu nit u kojoj ce se on obraditi i koja ce vratiti odgovor klijentu
+				}
+			}
+			
+			// definicije procedura koje ce klijenti koristiti
+			void procedure1() {
+				...
+			}
+			int procedure2(int a, int b) {
+				...
+				return 1;
+			}
+		} RPCModule;
+	* intramodulni i intermodulni pozivi
+		- kada server poziva procedure koje su definisane na njegovom racunaru, to su intramodulni pozivi
+		- medjutim, moze i server da poziva procedure koje su definisane na nekom drugom racunaru, i u toj situaciji server postaje klijent
+		tog racunara i ta pozvana procedura ce se izvrsiti u zasebnoj niti na tom racunaru - to su intermodulni pozivi
+		
+- Bounded Buffer - RPC (Remote Procedure Calls)
+	const int N = ...;
+
+	typedef struct BoundedBufferModule {
+		void put(T data);
+		T get();
+		
+		T boundedBuffer[N];
+		int front = 0, rear = 0;
+		Semaphore full = Semaphore(0);
+		Semaphore empty = Semaphore(N);
+		Semaphore mutexProducers = Semaphore(1);
+		Semaphore mutexConsumers = Semaphore(1);
+		
+		void put(T data) {
+			empty.wait();
+			mutexProducers.wait();
+			boundedBuffer[rear] = data;
+			rear = (rear + 1) % N;
+			mutexProducers.signal();
+			full.signal();
+		}
+		T get() {
+			full.wait();
+			mutexConsumers.wait();
+			T data = boundedBuffer[front];
+			front = (front + 1) % N;
+			mutexConsumers.signal();
+			empty.signal();
+			return data;
+		}
+	} BoundedBufferModule;
+	
+- Rendezvous
+	* sto se klijenta tice, vazi sve isto kao i kod RPC (Remote Procedure Calls)
+	* kada klijent pozove neku proceduru, on ce se blokirati sve dok se procedura ne izvrsi
+		- ovaj koncept nije nista novo, svakako regularni poziv neke procedure je uvek sinhroni, tj. pozivalac se blokira dok se procedura
+		ne izvrsi
+	* vazna razlika na serverskoj strani kod Rendezvous u odnosu na RPC je ta sto se ne kreiraju nove niti za svaki poziv procedure, vec se
+	sve izvrsava u okviru jedne niti
+	* pozivi procedura se na serveru opsluzuju sekvencijalno
+		- iz ovog se naslucuje da ce kod Rendezvous biti korisna alternativna komanda koju smo videli kod CSP koja omogucava da se
+		osluskuju razliciti zahtevi na razlicitim mestima istovremeno, i onda kako pristizu da se izvrsavaju sekvencijalno
+	* zahtev za izvrsenje procedure se moze prihvatiti na vise mesta na serveru, za razliku od RPC gde se uvek prihvatao na jednom mestu,
+	ali se onda za svaki zahtev tamo kreirala nova nit da bi se on opsluzio, dok se kod Rendezvous oni opsluzuju sekvencijalno u okviru jedne
+	niti
+	* deklaracija serverskih procedura izgleda ovako konceptualno:
+		typedef struct RendezvousModule {
+			// deklaracije procedura koje ce klijenti koristiti
+			void procedure1();
+			
+			// serverski proces
+			void server() {
+				while (true) {
+					in 
+					procedure1() -> {
+						// definicija procedure napisana na mestu poziva procedure
+					}
+					ni
+				}
+			}
+		} RendezvousModule;
+		- S (zasticeni iskaz) predstavlja telo procedure, dakle posao koji ce se obaviti kada klijent pozove tu proceduru
+			* ovo je slicno kao u CSP, ali je razlika sto smo u CSP tacno znali od kog procesa ocekujemo poruku, dok ovde ne znamo koji klijent
+			ce pozvati nasu serversku proceduru (ovde se koristi bidirekcioni komunikacioni kanal - preko istog klijenti salju zahteve serveru
+			i primaju odgovore od servera)
+		- serverski proces se blokira na "in", a kada se prihvati zahtev od nekog klijenta, klijentski proces ce biti blokiran sve dok serverski
+		proces ne dodje do "ni"
+			* ovo je naravno standardna pojava kao i kada zovemo neku najobicniju proceduru, program se ne nastavlja dalje dok se pozvana
+			procedura ne zavrsi
+	- zasticena alternativna komanda (slicno kao u CSP)	
+		in 
+		procedure1(args1) and B1 by e1 -> S1;
+		[]
+		...
+		[]
+		procedureN(argsN) and Bn by eN -> Sn;
+		ni
+		* Si - predstavlja telo procedure
+		* Bi - predstavlja opcioni uslov pod kojim se osluskuje poziv odredjene procedure, ukoliko taj uslov nije ispunjen, telo procedure Si
+		nece biti izvrseno iako je pristigao zahtev od klijenta
+		* ei - predstavlja opcioni prioritet procedure - on ima znacaj kada pristigne zahtev za vise procedura istovremeno da odredi kojim 
+		redosledom ce se one izvrsiti, ukoliko prioritet ei nije postavljen, procedure se izvrsavaju po FIFO principu
+		
+- Bounded Buffer - Rendezvous (resenje 1)
+	const int N = ...;
+
+	typedef struct BoundedBufferModule {
+		void put(T data);
+		T get();
+		
+		T boundedBuffer[N];
+		int front = 0, rear = 0, counter = 0;
+		while (true) {
+			in
+			put(data) and counter < N -> {
+				boundedBuffer[rear] = data;
+				rear = (rear + 1) % N;
+				counter++;
+			}
+			[]
+			get() and counter > 0 -> {
+				T data = boundedBuffer[front];
+				front = (front + 1) % N;
+				counter--;
+				return data;
+			}
+			ni
+		}
+	} BoundedBufferModule;
+	
+- Bounded Buffer - Rendezvous (resenje 2)
+	* ovde je sustina samo da se pokaze da, kao i u CSP, ista poruka (ovde procedura) moze da se ceka na razlicitim mestima
+		- to u RPC naravno nije moguce tu svakako ima samo jedna tacka ulaza i za svaku proceduru se pravi zasebna nit
+		- kod Rendezvous mozemo da unutar tela neke procedure cekamo poziv druge procedure (kao sto se u ovom primeru u okviru
+		procedure get ceka poziv put kada je bafer prazan, a u okviru procedure put se ceka poziv get kada je bafer pun)
+	const int N = ...;
+
+	typedef struct BoundedBufferModule {
+		void put(T data);
+		T get();
+		
+		T boundedBuffer[N];
+		int front = 0, rear = 0, counter = 0;
+		while (true) {
+			in
+			put(data) -> {
+				if (counter == N) {
+					in
+					get() -> {
+						T data = boundedBuffer[front];
+						front = (front + 1) % N;
+						counter--;
+						return data;
+					}
+					ni
+				}
+				boundedBuffer[rear] = data;
+				rear = (rear + 1) % N;
+				counter++;
+			}
+			[]
+			get() -> {
+				if (counter == 0) {
+					in
+					put(data) -> {
+						boundedBuffer[rear] = data;
+						rear = (rear + 1) % N;
+						counter++;
+					}
+					ni
+				}
+				T data = boundedBuffer[front];
+				front = (front + 1) % N;
+				counter--;
+				return data;
+			}
+			ni
+		}
+	} BoundedBufferModule;
+	
+- Time server - Rendezvous
+	* funkcija wakeMeUp ne funkcionise skroz isto kao kod problema Alarm Clock koji smo imali na vezbama iz monitora na K2
+		- kod monitora se metodi wakeMeUp kao parametar prosledjivalo koliko dugo nit pozivalac zeli da bude blokirana
+		- ovde se kao parametar umesto duzine trajanja blokiranog stanja prosledjuje tacno vreme kada nit pozivalac (tj. klijent u ovom
+		kontekstu) zeli da bude probudjena
+	* u ovom primeru je iskoriscena mogucnost Rendezvous koju nismo imali kod CSP - za proceduru wakeMeUp proverava se vrednost
+	wakeUpTime i prakticno ceka dok ona ne postane veca od currentTime, a za to vreme omogucavaju se pozivi ostalih procedura zahvaljujuci
+	tome sto je unutar tela procedure wakeMeUp stavljen skip koji obezbedjuje da kontrola toka nikada ne dodje do kraja procedure
+	wakeMeUp i na taj nacin se ne dolazi do "ni" i zato je klijentski proces za sve to vreme blokiran - uspesno omogucen thread_sleep
+	typedef struct TimeServerModule {
+		int getCurrentTime();
+		void wakeMeUp(int wakeUpTime);
+		void tick();
+		
+		int currentTime = 0;
+		while (true) {
+			in
+			getCurrentTime() -> {
+				return currentTime;
+			}
+			[]
+			wakeMeUp(wakeUpTime) and wakeUpTime <= currentTime -> {
+				skip;
+			}
+			[]
+			tick() -> {
+				currentTime++;
+			}
+			ni
+		}
+	} TimeServerModule;

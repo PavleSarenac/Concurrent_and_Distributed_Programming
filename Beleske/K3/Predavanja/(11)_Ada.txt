@@ -1,0 +1,112 @@
+- Ada
+	* ovo je programski jezik koji se i dalje koristi i razvija
+		- najvise se koristi u Americi, u Evropi skoro uopste ne
+	* prilagodjen je kako za konkurentno, tako i za distribuirano programiranje
+	* program se u Adi sastoji od:
+		- potprograma (funkcija ili procedura)
+		- taskova (to su nezavisni procesi koji se mogu izvrsavati konkurentno, a takodje mogu biti i niti koje se izvrsavaju u okviru jednog 
+		procesa)
+		- paketa (kao u Javi)
+	* u Adi postoje zasticeni tipovi podataka koji predstavljaju jezicku konstrukciju koja je naslicnija konceptu monitora
+		- dakle zasticen tip se ponasa kao klasa cije metode u jednom trenutku moze samo jedan proces da koristi
+	* procesi medjusobno komuniciraju po principu Rendezvous
+	* postoji selektivna naredba koja odredjuje koji zahtev ce biti prihvacen (poruka)
+	* proces pozivalac mora direktno da imenuje drugi proces kome zeli da posalje poruku (direktno imenovanje), dok proces primalac ne mora
+	da precizira od koga osluskuje poruke (indirektno imenovanje)
+		- ovo je razlicito u odnosu na CSP jer smo tamo morali da preciziramo i posiljaoca i primaoca
+		
+- Rendezvous
+	* serverski proces
+		- tacka ulaza (entry declaration) definise operaciju koju dati proces nudi
+			entry <Entry>(lista formalnih parametara)
+		- tacka prihvatanja poziva (accept statement) je mesto u kodu serverskog procesa gde se ceka na poziv od strane klijentskog procesa
+		preko specificirane tacke ulaza
+			accept <Entry> do
+				...
+			end;
+	* klijentski proces
+		- tacka poziva (entry call) izgleda slicno kao poziv procedure - imenuje se proces, tacka ulaza i prosledjuju stvarni parametri
+			<Task>.<Entry>(lista stvarnih parametara)
+			
+- Selektivna naredba
+	* ovo je kao alternativna komanda
+	* ima sledece opcije:
+		- selektivno cekanje (selective wait)
+		- uslovni poziv (conditional entry call)
+		- vremenski ogranicen poziv (timed entry call)
+	* u else alternativu se ulazi ako u nijednu drugu ne moze
+	* selektivne naredbe su nedeterministicke
+		select
+			[when condition_1 =>] selective_wait_alternative
+		or
+			...
+		...
+		or
+			[when condition_N =>] selective_wait_alternative
+		[else
+			sequence_of_statements]
+		end select;
+		
+- Primer - Klijent/Server arhitektura
+	SERVER
+	task A is
+		entry check_point(Input: INTEGER; Output: out INTEGER)
+	end A;
+	task body A is
+		Local: INTEGER;
+		begin
+			...
+			accept check_point(Input: INTEGER; Output: out INTEGER) do
+				Local := Input;
+				Output := f(Input);
+			end check_point;
+			...
+		end;
+	end A;	
+	
+	CLIENT
+	task B;
+	task body B is
+		To_A, From_A: INTEGER;
+		begin
+			To_A := ...;
+			...
+			A.check_point(To_A, From_A);
+			...
+		end;
+	end B;
+	
+- Licitacija u Adi
+	* when raise_bid'COUNT = 0
+		- ovaj uslov ispituje da li nema nijedan pristigli zahtev za poziv procedure raise_bid i uz pomoc njega u nasem kodu ispod kazemo
+		da ukoliko istovremeno pristigne zahtev za povecanjem cene (raise_bid) i za citanjem trenutne cene (get_current_bid), prioritet
+		ce imati raise_bid, tj. prvo ce se ta procedura izvrsiti
+	task BID is
+		entry raise_bid (From: BIDDER_ID; By: NATURAL);
+		entry get_current_bid (Value: out NATURAL);
+	end BID;
+	task body BID is
+		Current_Bid: NATURAL := 0;
+		Last_Bidder: BIDDER_ID;
+		begin
+			accept raise_bid(From: BIDDER_ID; By: NATURAL) do
+				Last_Bidder := From;
+				Current_Bid := Current_Bid + By;
+			end raise_bid;
+			loop
+				select
+					accept raise_bid(From: BIDDER_ID; By: NATURAL) do
+						Last_Bidder := From;
+						Current_Bid := Current_Bid + By;
+					end raise_bid;
+				or when raise_bid'COUNT = 0 =>
+					accept get_current_bid(Value: out NATURAL) do
+						Value := Current_Bid;
+					end get_current_bid;
+				or when Current_Bid >= Some_Value
+					delay 10.0;
+					exit;
+				end select;
+			end loop;
+		end;
+	end BID;

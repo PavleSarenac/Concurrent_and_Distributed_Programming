@@ -1,20 +1,21 @@
 - Communicating Sequential Processes (CSP)
-	* ovo je programski model kod koga se programi sastoje od vise sekvencijalnih procesa koji medjusobno komuniciraju sinhronom point-to-point
-	razmenom poruka
+	* ovo je programski model kod koga se programi sastoje od vise sekvencijalnih procesa koji medjusobno komuniciraju sinhronom 
+	point-to-point razmenom poruka
 		* proces koji salje poruku se blokira dok je proces primalac ne primi
 		* proces koji prima poruku se blokira sve dok je ne primi
 	* ovaj programski model treba da nam omoguci da razresimo neke probleme koje smo imali kod sinhrone razmene poruka izmedju procesa
-	* ovo nije programski jezik, vec programski model koji treba da nam pomogne pri proveri da li postoji neki deadlock, livelock, nedostizan kod, ...
-	* komunikacija izmedju procesa ce se obavljati sinhronom point-to-point prazmenom poruka
-	* ovde imamo direktno imenovanje procesa (procesi koji salju poruke, kao i procesi koji primaju poruke moraju naznaciti kome salju/od koga
-	primaju)
+	* ovo nije programski jezik, vec programski model koji treba da nam pomogne pri proveri da li postoji neki deadlock, livelock, 
+	nedostizan kod, ...
+	* komunikacija izmedju procesa ce se obavljati sinhronom point-to-point razmenom poruka
+	* ovde imamo direktno imenovanje procesa (procesi koji salju poruke, kao i procesi koji primaju poruke moraju naznaciti kome salju/od 
+	koga primaju)
 	* postoji alternativna komanda koja sluzi za sprecavanje deadlock-a (mrtve blokade)
 	* postoji i repetitivna alternativna komanda koja nam sluzi za istovremeno proveravanje veceg broja poruka (proverava se da li su stigle) 
 	* kao sto se u programskom jeziku C npr. blok koda ogradjuje sa { }, u CSP se blok koda ogradjuje sa [ ]
 	
 - Procesi i paralelizam
 	* deklaracija procesa
-		imeProcesa :: implementacijaProcesa
+		imeProcesa::implementacijaProcesa
 	* iza naziva procesa mogu se nalaziti i zagrade u okviru kojih je navedena lista celobrojnih vrednosti (npr. proc(1), proc(1, 2) itd.)
 		- u tom slucaju i naziv procesa i lista predstavljaju jedinstveni identifikator, tj. ime procesa (imeProcesa)
 	* deklaracija paralelnih procesa
@@ -80,9 +81,10 @@
 		]
 		- izvrsava se kao neka for petlja dokle god postoji neka izvrsiva alternativa
 		- dokle god bilo koja od alternativa moze da se izvrsi, mi ostajemo u nasoj iterativnoj komandi
-			* neka alternativa moze da se izvrsi dokle god je bilo koji od uslova B1...Bn ispunjen, i ako je u tim slucajevima gde je uslov Bi ispunjen 
-			moguce da proces koji se ceka da nam posalje poruku zaista i posalje poruku - Ci, tj. prijem poruke je izvrsiv (to znaci da se taj proces 
-			nalazi u delu koda iz kog moze da posalje poruku, tj. taj proces se i dalje nije zavrsio)
+			* neka alternativa moze da se izvrsi dokle god je bilo koji od uslova B1...Bn ispunjen, i ako je u tim slucajevima gde je uslov Bi 
+			ispunjen moguce da proces koji se ceka da nam posalje poruku zaista i posalje poruku - Ci, tj. prijem poruke je izvrsiv (to znaci da 
+			se taj proces nalazi u delu koda iz kog moze da posalje poruku, tj. taj proces se i dalje nije zavrsio)
+			* dakle da bi neka alternativa bila izvrsiva nije dovoljno da je samo uslov B ispunjen, vec mora da zaista bude moguc i prijem poruke C
 	* mozemo imati i iterativne komande sledecih izgleda (ovako mozemo pisati for i while petlje u CSP):
 		* [ 	
 			B1 -> S1;

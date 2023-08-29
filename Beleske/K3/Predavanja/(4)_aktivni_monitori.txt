@@ -17,13 +17,13 @@
 			* ukoliko imamo kratkozivecu konekciju izmedju klijenta i servera, klijent mora da posalje serveru svoj identifikator
 			* server salje odgovor na isti kanal preko kog je dobio zahtev - dakle taj kanal ce biti request/reply kanal istovremeno
 			
-* komunikacioni kanali request i reply nisu deljene promenljive kao sto smo ranije navikli u konkurentnom programiranju, vec su napisani ovako
-globalno samo da bismo naznacili da svi barataju sa takvim kanalima i da bismo lakse ispratili kod, ali se uopste ne radi o istim kanalima u
-razlicitim delovima koda - npr. u funkciji server i client se barata sa kanalima request i reply ali uopste se ne radi o istim kanalima vec svaki
+* komunikacioni kanali request i reply nisu deljene promenljive kao sto smo ranije navikli u konkurentnom programiranju, vec su napisani 
+ovako globalno samo da bismo naznacili da svi barataju sa takvim kanalima i da bismo lakse ispratili kod, ali se uopste ne radi o istim kanalima 
+u razlicitim delovima koda - npr. u funkciji server i client se barata sa kanalima request i reply ali uopste se ne radi o istim kanalima vec svaki
 proces ima svoj par ovih kanala
-	- zato ih cak ne moramo ni nazivati na isti nacin u razlicitim delovima koda, ali onda mora postojati neki glavni proces (konfiguracioni menadzer)
-	koji ce da dohvati na osnovu nekog identifikatora komunikacioni kanal koji je na odredjenom mestu u kodu potreban - tu bismo imali indirektno 
-	imenovanje jer bi taj nas naziv odredjenog kanala ustvari upucivao na kanal koji nam je dohvatio konfiguracioni menadzer
+	- zato ih cak ne moramo ni nazivati na isti nacin u razlicitim delovima koda, ali onda mora postojati neki glavni proces (konfiguracioni 
+	menadzer) koji ce da dohvati na osnovu nekog identifikatora komunikacioni kanal koji je na odredjenom mestu u kodu potreban - tu bismo 
+	imali indirektno imenovanje jer bi taj nas naziv odredjenog kanala ustvari upucivao na kanal koji nam je dohvatio konfiguracioni menadzer
 		* u Javi na osnovu IP adrese i porta moze da se dohvati odgovarajuci komunikacioni kanal
 
 * mi smo ovde zapravo napravili server sa samo jednom operacijom
@@ -51,13 +51,13 @@ void client(int clientId) {
 }
 
 * pretpostavka je da se svaka poslata poruka garantovano isporucuje (necemo uzimati u obzir mogucnost da poruka moze da se zagubi)
-* ako jedan klijent salje vise poruka u isti komunikacioni kanal (postansko sanduce), garantovano je da ce one stici u FIFO redosledu, medjutim 
-ako vise klijenata istovremeno salje poruke serveru preko istog komunikacionog kanala (postanskog sanduceta), nemamo pojma kako ce se 
-te poruke ucesljati i kojim redosledom ce se isporuciti serveru
+* ako jedan klijent salje vise poruka u isti komunikacioni kanal (postansko sanduce), garantovano je da ce one stici u FIFO redosledu, 
+medjutim ako vise klijenata istovremeno salje poruke serveru preko istog komunikacionog kanala (postanskog sanduceta), nemamo pojma 
+kako ce se te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 
 - Klijent-server arhitektura - aktivni monitori
-	* aktivni monitori predstavljaju simulaciju monitora iz konkurentnog programiranja koriscenjem serverskih procesa i tehnike razmene poruka
-	(message passing)
+	* aktivni monitori predstavljaju simulaciju monitora iz konkurentnog programiranja koriscenjem serverskih procesa i tehnike razmene 
+	poruka (message passing)
 	* osobine aktivnih monitora:
 		- imaju jedan tok kontrole
 			* kada bi imao vise tokova kontrole to bi onda bilo RPC (Remote Procedure Call), a ne aktivan monitor
@@ -81,14 +81,15 @@ te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 		- klijent odgovor ocekuje na svom odredjenom reply kanalu koji je uparen sa njegovim identifikatorom
 	* ovo se zove event-driven arhitektura
 		- danas je ona dosta popularna zbog velike brzine
-		- u takvoj arhitekturi uvek postoji neki red iz kog ciklicno izvlacimo zahteve koje treba da obavimo, odradimo sta treba pomocu argumenata
-		koji su nam takodje prosledjeni i onda rezultat vratimo
+		- u takvoj arhitekturi uvek postoji neki red iz kog ciklicno izvlacimo zahteve koje treba da obavimo, odradimo sta treba pomocu 
+		argumenata koji su nam takodje prosledjeni i onda rezultat vratimo
 		- sistemi izgradjeni na ovoj arhitekturi bi trebalo da budu dosta brzi
-			* to je upravo jer nas aktivan monitor ima samo jednu nit i uopste nema blokiranja niti vec ona konstantno radi, prima zahteve, obradjuje
-			koje moze, a one koje ne moze stavlja u red i obradjuje cim bude mogla
+			* to je upravo jer nas aktivan monitor ima samo jednu nit i uopste nema blokiranja niti vec ona konstantno radi, prima zahteve, 
+			obradjuje koje moze, a one koje ne moze stavlja u red i obradjuje cim bude mogla
 		- kod naseg aktivnog monitora postoji jedna jedina nit (tok kontrole) i ona nikada ne bi smela da se zablokira - ako bi se ona zablokirala,
 		server bi potpuno prestao da radi (nastao bi deadlock) upravo jer je to jedina njegova nit
-	* analogija izmedju monitora sa vise metoda iz konkurentnog programiranja i aktivnog monitora sa vise operacija iz distribuiranog programiranja:
+	* analogija izmedju monitora sa vise metoda iz konkurentnog programiranja i aktivnog monitora sa vise operacija iz distribuiranog 
+	programiranja:
 		- identifikatori razlicitih procedura <=> tipovi operacije prosledjeni preko request kanala
 		- tela procedura <=> delovi case iskaza u zavisnosti od tipa operacije koji je prosledjen
 	
@@ -140,8 +141,8 @@ te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 
 	void ServerFIFOSemaphore() {
 		int s = 0;
-		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
-		// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
+		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u
+		// konkurentnom programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
 		queue blockedQueue;
 		int clientId;
 		string operationKind;
@@ -168,17 +169,17 @@ te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 	}
 
 	- Ovde cemo semafor napraviti preko simuliranog monitora u konkurentnom programiranju sa Signal and Continue disciplinom
-		* kada se pozove signal, klijent koji treba da se probudi nece odmah nastaviti svoje izvrsavanje, vec ce prvo biti prebacen iz reda blokiranih
-		procesa u entry queue (red procesa koji cekaju da udju u monitor), pa ce tek kada dodje na red po FIFO principu on zaista biti probudjen i
-		iz entry queue i nastaviti svoje izvrsavanje
+		* kada se pozove signal, klijent koji treba da se probudi nece odmah nastaviti svoje izvrsavanje, vec ce prvo biti prebacen iz reda 
+		blokiranih procesa u entry queue (red procesa koji cekaju da udju u monitor), pa ce tek kada dodje na red po FIFO principu on zaista 
+		biti probudjen i iz entry queue i nastaviti svoje izvrsavanje
 
 	Channel request(int clientId, string operationKind);
 	Channel reply[] (dummyType);
 
 	void ServerFIFOSemaphore() {
 		int s = 0;
-		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u konkurentnom
-		// programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
+		// simuliramo monitorsku uslovnu promenljivu pomocu reda u koji cemo samo smestati id-eve klijenata koje bismo blokirali u
+		// konkurentnom programiranju (dodavanje u red blockedQueue ovde radimo umesto blokiranja na uslovnoj promenljivoj)
 		queue blockedQueue;
 		// simuliramo entry queue pomocu ovog reda
 		queue entryQueue;
@@ -214,19 +215,19 @@ te poruke ucesljati i kojim redosledom ce se isporuciti serveru
 - analogija izmedju monitora iz konkurentnog programiranja i aktivnog monitora iz distribuiranog programiranja
 	* wait iskaz <=> cuvanje zahteva koji cekaju (u red npr. kao sto smo uradili u prosla dva primera)
 		- zahtevi se cuvaju u redu da bi serverska nit mogla da nastavi izvrsavanje jer ona ne sme nikada da se zablokira posto je jedina
-		- pri cuvanju zahteva u nekom redu, moze biti potrebno i da se cuva i jos dodatan kontekst koji bi inace cuvao operativni sistem, ali mi ovde
-		hocemo da odradimo taj posao bez operativnog sistema, pa je zato to sada nasa odgovornost
-			* u taj kontekst mogu da spadaju lokalne promenljive metoda, kao i adresa na kojoj treba da se nastavi izvrsavanje nakon obrade zahteva
+		- pri cuvanju zahteva u nekom redu, moze biti potrebno i da se cuva i jos dodatan kontekst koji bi inace cuvao operativni sistem, ali mi 
+		ovde hocemo da odradimo taj posao bez operativnog sistema, pa je zato to sada nasa odgovornost
+			* u taj kontekst mogu da spadaju lokalne promenljive metoda, kao i adresa na kojoj treba da se nastavi izvrsavanje nakon obrade 
+			zahteva
 	* signal iskaz <=> dovhatanje i obrada zahteva koji je cekao da bude obradjen u redu (i dohvatanje konteksta ukoliko se on cuvao)
 	
 - kompletan rezime poredjenja monitora iz konkurentnog programiranja i aktivnog monitora iz distribuiranog programiranja
 	* monitor iz konkurentnog programiranja <=> aktivni monitor iz distribuiranog programiranja
-	
 	* stalne promenljive <=> lokalne serverske promenljive
 	* identifikatori procedura <=> tipovi operacije prosledjeni preko request kanala
 	* pozivi procedura (monitor.procedura()) <=> send request(); receive reply();
 	* ulaz u monitor (entry queue) <=> receive request();
 	* izlaz iz monitora <=> send reply();
 	* wait iskaz <=> cuvanje zahteva koji cekaju (kao i konteksta po potrebi)
-	* signal iskaz <=> dovhatanje i obrada zahteva koji je cekao da bude obradjen u redu (kao i dohvatanje konteksta po potrebi)
+	* signal iskaz <=> dovhatanje i obrada zahteva koji je cekao da bude obradjen u redu (kao i dohvatanje konteksta ukoliko je i on bio cuvan)
 	* tela procedura <=> delovi case iskaza u zavisnosti od tipa operacije koji je prosledjen

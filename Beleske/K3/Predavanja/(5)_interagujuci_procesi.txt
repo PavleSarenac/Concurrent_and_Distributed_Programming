@@ -164,13 +164,13 @@ predstavljaju kao neko djubre zbog sistem moze prilikom neke naredne komunikacij
 			}
 			// Tekuci cvor salje svom desnom susedu azurirane min i max
 			send values[(id + 1) % n] (result);
-			// Tekuci cvor prima finalni min i max od svog levog suseda (ukoliko je u pitanju poslednji cvor P[n-1], on ne treba da primi finalne min i
-			// max jer ih on vec ima i zapoceo je lanac njihovog prosledjivanja)
+			// Tekuci cvor prima finalni min i max od svog levog suseda (ukoliko je u pitanju poslednji cvor P[n-1], on ne treba da primi finalne min
+			// i max jer ih on vec ima i zapoceo je lanac njihovog prosledjivanja)
 			if (id != n - 1) {
 				receive values[id] (result);
 			}
-			// Tekuci cvor prosledjuje svom desnom susedu finalni min i max (ukoliko desni sused nije poslednji ili prvi cvor (P[n-1] ili P[0]), jer oni vec 
-			// u ovom trenutku imaju finalni min i max, pa nema potrebe da im se on ponovo salje)
+			// Tekuci cvor prosledjuje svom desnom susedu finalni min i max (ukoliko desni sused nije poslednji ili prvi cvor (P[n-1] ili P[0]), jer
+			//  oni vec u ovom trenutku imaju finalni min i max, pa nema potrebe da im se on ponovo salje)
 			if (id < n - 2) {
 				send values[id + 1] (result);
 			}

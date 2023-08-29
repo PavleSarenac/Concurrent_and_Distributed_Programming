@@ -16,7 +16,7 @@
 		- rendezvous
 			* ovaj koncept smo vec razmatrali kod Sleeping Barber Problem
 	* obicno su procesi koji komuniciraju na razlicitim racunarima, ali to ni ne mora da bude slucaj
-		- npr. kod Andriod mobilnih uredjaja procesi komuniciraju razmenom poruka iako su na istom racunaru
+		- npr. kod Android mobilnih uredjaja procesi komuniciraju razmenom poruka iako su na istom racunaru
 	* kod distribuiranog programiranja nema deljenih promenljivih
 		- upravo zato sto svaki proces ima svoju memoriju i nije ni moguce da neki proces pristupi memoriji drugog procesa
 		- zato, da bi procesi mogli da komuniciraju, definisu se operacije za slanje i prijem poruka - morace da se nekako zna ko salje poruku

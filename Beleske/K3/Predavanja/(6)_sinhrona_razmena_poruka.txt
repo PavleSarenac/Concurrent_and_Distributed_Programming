@@ -1,11 +1,13 @@
 - Sinhrona razmena poruka (message passing)
-	* sinhrono slanje poruka je drugacije u odnosu na asinhrono slanje - asinhrono slanje poruke je neblokirajuca operacija, dakle onaj koji je poslao
-	poruku nastavlja svoje izvrsavanje odmah nakon slanja i uopste ne ceka da proces koji ceka tu poruku nju zaista i primi, dok je sinhrono slanje
-	blokirajuca operacija jer se proces koji je poslao poruku blokira sve dok mu proces prijemnik ne javi da je uspesno primio poruku
+	* sinhrono slanje poruka je drugacije u odnosu na asinhrono slanje - asinhrono slanje poruke je neblokirajuca operacija, dakle onaj koji je 
+	poslao poruku nastavlja svoje izvrsavanje odmah nakon slanja i uopste ne ceka da proces koji ceka tu poruku nju zaista i primi, dok je 
+	sinhrono slanje blokirajuca operacija jer se proces koji je poslao poruku blokira sve dok mu proces prijemnik ne javi da je uspesno primio 
+	poruku
 		- synch_send chan(expr1, ..., exprn);
 			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
 			* pretpostavka je da je bafer u koji se smesta poruka ogranicenog kapaciteta
-	* sinhroni prijem poruka je isti kao i asinhroni prijem - u oba slucaja je to blokirajuca operacija i onaj koji prima poruku se blokira dok je ne primi
+	* sinhroni prijem poruka je isti kao i asinhroni prijem - u oba slucaja je to blokirajuca operacija i onaj koji prima poruku se blokira dok je 
+	ne primi
 		- receive var(var1, ..., varn);
 			* tipovi argumenata moraju da budu uskladjeni sa tipovima koji su u deklaraciji komunikacionog kanala
 	
@@ -21,8 +23,8 @@
 		
 	* kod centralizovanog nacina komunikacije (u fajlu interagujuci_procesi.txt) ne bi doslo do deadlock-a kada bismo asinhrono slanje poruka
 	zamenili sinhronim slanjem
-	* kod simetricnog nacina komunikacije (u fajlu interagujuci_procesi.txt) bi doslo do deadlock-a kada bismo asinhrono slanje poruka zamenili
-	sinhronim slanjem
+	* kod simetricnog nacina komunikacije (u fajlu interagujuci_procesi.txt) bi doslo do deadlock-a kada bismo asinhrono slanje poruka 
+	zamenili sinhronim slanjem
 	* kod prstenastog nacina komunikacije (u fajlu interagujuci_procesi.txt) ne bi doslo do deadlock-a kada bismo asinhrono slanje poruka
 	zamenili sinhronim slanjem
 	

@@ -2,16 +2,17 @@
 	* ovo nije programski jezik, vec biblioteka za razlicite programske jezike (mi cemo raditi u C-u)
 	* ova biblioteka nam omogucava da koristimo asinhronu komunikaciju
 	* takodje, ova biblioteka treba da nam omoguci da u distribuiranom programiranju koristimo nesto sto lici na deljene promenljive
-		- to ce biti moguce jer u lindi imamo prostor torki (tuple space) - deljenu asocijativnu memoriju etiketiranih zapisa (tagged data records)
+		- to ce biti moguce jer u lindi imamo prostor torki (tuple space) - deljenu asocijativnu memoriju etiketiranih zapisa (tagged data 
+		records)
 	* postoji 6 primitiva za pristup prostoru torki (tuple space)
-	* ovde se necemo baviti time kako da konfigurisemo taj deljeni prostor torki (tuple space) i kako da povezemo nase racunare u jedan klaster
-	kako bi videli svi taj isti prostor, vec cemo se baviti koriscenjem ove biblioteke radi obezbedjivanja sinhronizacije
+	* ovde se necemo baviti time kako da konfigurisemo taj deljeni prostor torki (tuple space) i kako da povezemo nase racunare u jedan 
+	klaster kako bi videli svi taj isti prostor, vec cemo se baviti koriscenjem ove biblioteke radi obezbedjivanja sinhronizacije
 	* postoji jedinstveni deljeni komunikacioni kanal ka prostoru torki (tuple space)
 	* u deljenom prostoru torki se pamte distribuirane strukture podataka kojima procesi konkurentno pristupaju
 		- cak mogu i trajno da se pamte te strukture
 	* Linda funkcionise kao distribuirani deljeni kes
-		- kada nas racunar npr. upisuje neku torku u prostor torki, ona se verovatno prvo upise na nasem racunaru, pa onda kada trazimo neku torku
-		iz prostora torki prvo pretrazujemo nas racunar, pa ako je nema kod nas onda pretrazujemo ostale racunare iz klastera
+		- kada nas racunar npr. upisuje neku torku u prostor torki, ona se verovatno prvo upise na nasem racunaru, pa onda kada trazimo neku 
+		torku iz prostora torki prvo pretrazujemo nas racunar, pa ako je nema kod nas onda pretrazujemo ostale racunare iz klastera
 		
 - Primitive u biblioteci Linda
 	* OUT
@@ -23,8 +24,8 @@
 		prostora torki
 	* RD
 		- ceka dok se specificirani objekat ne pojavi u prostoru torki, ali ne preuzima ga kad se pojavi, vec ga ostavlja u prostoru torki
-		- lici na operaciju primanja poruke (receive) - proces koji je pozvao RD se blokira sve dok se specificirana poruka ne pojavi u prostoru torki,
-		i kada se pojavi proces se odblokira (ne preuzima tu poruku kao sto to radi primitiva IN vec je ostavlja u prostoru torki)
+		- lici na operaciju primanja poruke (receive) - proces koji je pozvao RD se blokira sve dok se specificirana poruka ne pojavi u prostoru 
+		torki, i kada se pojavi proces se odblokira (ne preuzima tu poruku kao sto to radi primitiva IN vec je ostavlja u prostoru torki)
 	* EVAL
 		- kreira nit na nekom racunaru iz klastera - ta nit ce naravno videti deljeni prostor torki i moci ce da radi sve operacije nad njim
 	* INP
@@ -40,7 +41,8 @@
 		OUT("tag", expr1, ..., exprN);
 	* primer preuzimanja objekta iz prostora torki (ukoliko postoji torka ciji se parametri poklapaju)
 		IN("tag", ?a:t, 55, ..., true, ?k:t);
-		- IN parametri se zovu sabloni (templates) - moraju da se upare tagovi, stvarni parametri, broj paramatara, kao i tip formalnih parametara
+		- IN parametri se zovu sabloni (templates) - moraju da se upare tagovi, stvarni parametri, broj paramatara, kao i tip formalnih 
+		parametara
 		- "tag", 55, true su stvarni parametri i predstavljaju deo "naziva" torke
 			* u njih se ne upisuje nista iz dohvacene torke, vec oni sluze samo za uparivanje sa specificnom torkom
 				- logicno je da se ne upisuje nista jer ce u dohvacenoj torci ovi parametri imati identicne vrednosti
