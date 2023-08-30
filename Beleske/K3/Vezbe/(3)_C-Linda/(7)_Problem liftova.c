@@ -53,8 +53,8 @@ void passenger(int id, int enteringFloor, int leavingFloor) {
 
         // Putnik izlazi iz lifta.
         in("leaveElevator", leavingFloor);
-        in("numberOfPeopleLeftInElevator", leavingFloor, ?numberOfPeopleLeftInElevator);
         inp("floorNumber", leavingFloor);
+        in("numberOfPeopleLeftInElevator", leavingFloor, ?numberOfPeopleLeftInElevator);
         out("numberOfPeopleLeftInElevator", leavingFloor, numberOfPeopleLeftInElevator - 1);
         out("leaveElevator", leavingFloor);
     }
