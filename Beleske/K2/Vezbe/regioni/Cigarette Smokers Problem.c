@@ -3,9 +3,9 @@
 
 typedef struct Smokers {
     // Svaki atribut oznacava da li je konkretan predmet trenutno na stolu.
-    bool papir = false;
-    bool duvan = false;
-    bool sibice = false;
+    bool paper = false;
+    bool tobacco = false;
+    bool matches = false;
     // Ovaj atribut govori da li agent moze da spusti naredna dva predmeta na sto.
     bool next = false;
 } Smokers;
@@ -18,16 +18,16 @@ void agent() {
         region(smokers) {
             switch(i) {
                 case 0:
-                    papir = true;
-                    duvan = true;
+                    paper = true;
+                    tobacco = true;
                     break;
                 case 1:
-                    papir = true;
-                    sibice = true;
+                    paper = true;
+                    matches = true;
                     break;
                 case 2:
-                    duvan = true;
-                    sibice = true;
+                    tobacco = true;
+                    matches = true;
                     break;
             }
             await(next == true);
@@ -37,12 +37,12 @@ void agent() {
 }
 
 // Ovaj pusac ima neogranicenu zalihu papira i njemu trebaju duvan i sibice.
-void smokerPapir() {
+void smokerPaper() {
     while (true) {
         region(smokers) {
-            await(duvan && sibice);
-            duvan = false;
-            sibice = false;
+            await(tobacco && matches);
+            tobacco = false;
+            matches = false;
         }
 
         smoke();
@@ -54,12 +54,12 @@ void smokerPapir() {
 }
 
 // Ovaj pusac ima neogranicenu zalihu duvana i njemu trebaju papir i sibice.
-void smokerDuvan() {
+void smokerTobacco() {
     while (true) {
         region(smokers) {
-            await(papir && sibice);
-            papir = false;
-            sibice = false;
+            await(paper && matches);
+            paper = false;
+            matches = false;
         }
 
         smoke();
@@ -71,12 +71,12 @@ void smokerDuvan() {
 }
 
 // Ovaj pusac ima neogranicenu zalihu sibica i njemu trebaju papir i duvan.
-void smokerSibice() {
+void smokerMatches() {
     while (true) {
         region(smokers) {
-            await(papir && duvan);
-            papir = false;
-            duvan = false;
+            await(paper && tobacco);
+            paper = false;
+            tobacco = false;
         }
 
         smoke();
