@@ -92,7 +92,7 @@ void coordinator() {
 
 
 // Resenje 2 - jedan proces moze da cita iz vise razlicitih postanskih sanducica - proces koordinator ce imati dva sanduceta.
-// U ovom resenju je samo drugaciji sitan detalj - necemo brojati pisca koji cita pomocu brojaca, vec cemo odmah da
+// U ovom resenju je samo drugaciji sitan detalj - necemo brojati pisca koji pise pomocu brojaca, vec cemo odmah da
 // ga sacekamo da zavrsi. Takodje cemo isprazniti uvek poruke o zavrsetku od citalaca, da bi nam brojac citalaca uvek bio azuran
 // da bi predstavljao trenutno stanje.
 

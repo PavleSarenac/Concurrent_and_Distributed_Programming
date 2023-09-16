@@ -10,7 +10,7 @@ const int N = ...;  // broj cvorova u grafu
 mbx nodes[N];
 
 // Ovaj cvor inicira sve tako sto prvi posalje poruku bilo kom od preostalih cvorova u grafu.
-void initiatiorGraphNode(int nodeId) {
+void initiatorGraphNode(int nodeId) {
     msg message;
     bool status;
     int firstNodeId = Math.floor(Math.random() * N);

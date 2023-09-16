@@ -24,7 +24,7 @@ void barrier() {
     threadCnt++;
     if (threadCnt == N) {
         threadCnt = 0;
-        for (int i = 0; i < N; i++) {
+        for (int i = 0; i < N - 1; i++) {
             semBarrier.signal();
             escaped.wait();
         }
