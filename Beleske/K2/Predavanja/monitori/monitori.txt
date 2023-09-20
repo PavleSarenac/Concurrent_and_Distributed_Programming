@@ -123,8 +123,8 @@ monitor monitorName {
 			entryQueue.wait();
 
 			// (2) cekanje na uslovnoj promenljivoj
-			entryQueue.signal();
 			condQueueSize++;
+			entryQueue.signal();
 			condQueue.wait();
 			entryQueue.wait();
 
@@ -136,10 +136,10 @@ monitor monitorName {
 
 			// (4) budjenje svih procesa na uslovnoj promenljivoj
 			if (condQueueSize > 0) {
-				condQueueSize = 0;
 				for (int i = 0; i < condQueueSize; i++) {
 					condQueue.signal();
 				}
+				condQueueSize = 0;
 			}
 
 			// (5) izlazak iz monitora
@@ -159,8 +159,8 @@ monitor monitorName {
 			entryQueue.wait();
 
 			// (2) cekanje na uslovnoj promenljivoj
-			entryQueue.signal();
 			condQueueSize++;
+			entryQueue.signal();
 			condQueue.wait();
 			condQueueSize--;
 
@@ -194,19 +194,19 @@ monitor monitorName {
 			entryQueue.wait();
 
 			// (2) cekanje na uslovnoj promenljivoj
+			condQueueSize++;
 			if (urgentQueueSize > 0) {
 				urgentQueue.signal();
 			} else {
 				entryQueue.signal();
 			}
-			condQueueSize++;
 			condQueue.wait();
 			condQueueSize--;
 
 			// (3) budjenje jednog procesa na uslovnoj promenljivoj
 			if (condQueueSize > 0) {
-				condQueue.signal();
 				urgentQueueSize++;
+				condQueue.signal();
 				urgentQueue.wait();
 				urgentQueueSize--;
 			}
